@@ -1,0 +1,55 @@
+---
+title: "Data Science Project 2 -  Return to Education and Income in the United States (2023)"
+author:
+- Constantine Zhang
+- Ha Nguyen
+- Kemal Ege Sural
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+---
+```{r lirary, include = FALSE}
+library(tidyverse)
+library(haven)
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(results="markup", warning = F, message = F,
+                      fig.width=8, fig.height=6, fig.dim=c(8,6), fig.align='center')
+options(scientific=T, digits = 3,scipen = 999)
+```
+```{r data, include = FALSE}
+acs2023 <- read.csv("acs2023.csv")
+```
+# Literature Review - Ha
+
+# DEA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
+
+1. Statistics summary, plot 
+
+2. Normal distribution test
+
+3. Hypothesis testing 
+
+# Regression
+
+1. Plot of correlation
+
+2. Run regression
+
+3. Test the fit of the regression
+
+- Confusion matrix
+
+- Mcfaddle
+
+- Anova Test between models (remove controlling variables)
+
+- ROC/AUC
