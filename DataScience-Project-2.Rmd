@@ -16,7 +16,7 @@ output:
     toc: true
     toc_depth: '3'
 ---
-```{r lirary, include = FALSE}
+```{r library, include = FALSE}
 library(tidyverse)
 library(haven)
 ```
@@ -30,15 +30,155 @@ acs2023 <- read.csv("acs2023.csv")
 ```
 # Literature Review - Ha
 
+```{r }
+acs_raw <- read.csv("acs2023.csv")
+df <- acs_raw # copy
+
+
+#Renaming
+
+names(df)[names(df) == "inctot"]           <- "total_income"
+names(df)[names(df) == "real_gdp"]         <- "county_gdp"
+names(df)[names(df) == "real_pc_income"]   <- "county_pc_income"
+names(df)[names(df) == "total_employment"] <- "county_total_jobs"
+
+names(df)[names(df) == "educ"]     <- "education_code"
+names(df)[names(df) == "age"]      <- "age"              
+names(df)[names(df) == "sex"]      <- "gender_code"
+names(df)[names(df) == "race"]     <- "race_code"
+names(df)[names(df) == "marst"]    <- "marital_status_code"
+names(df)[names(df) == "nchild"]   <- "num_children"
+names(df)[names(df) == "citizen"]  <- "citizenship_code"      
+names(df)[names(df) == "empstat"]  <- "employment_status_code" 
+names(df)[names(df) == "labforce"] <- "labor_force_code"       
+names(df)[names(df) == "perwt"]    <- "person_weight"
+
+#Factor changes
+
+df$gender <- factor(df$gender_code, 
+                    levels = c(1, 2), 
+                    labels = c("Male", "Female"))
+
+df$marital_status <- factor(df$marital_status_code, levels = 1:6, 
+                            labels = c("Married (Present)", "Married (Absent)", 
+                                       "Separated", "Divorced", "Widowed", "Single"))
+
+
+df$race <- factor(df$race_code, levels = 1:6,
+                  labels = c("White", "Black", "Native American", 
+                             "Chinese", "Japanese", "Other Asian/Pacific"))
+
+df$citizenship <- factor(df$citizenship_code, levels = 1:3,
+                         labels = c("Born Abroad (US Parents)", 
+                                    "Naturalized Citizen", 
+                                    "Not a Citizen"))
+
+df$employment_status <- factor(df$employment_status_code, levels = 1:3,
+                               labels = c("Employed", "Unemployed", "Not in Labor Force"))
+
+df$labor_force <- factor(df$labor_force_code, levels = 1:2,
+                         labels = c("Not in Labor Force", "In Labor Force"))
+
+
+df$education_level <- factor(df$education_code, levels = 1:11,
+                             labels = c("Nursery-Gr4", "Gr5-8", "Gr9", "Gr10", "Gr11", "Gr12",
+                                        "1yr College", "2yr College", "3yr College", "4yr College", "5+yr College"))
+
+
+df$educ_group <- NA
+df$educ_group[df$education_code <= 6] <- "HS or Less"
+df$educ_group[df$education_code %in% c(7, 8, 9)] <- "Some College"
+df$educ_group[df$education_code == 10] <- "Bachelor's"
+df$educ_group[df$education_code == 11] <- "Post-Grad"
+df$educ_group <- factor(df$educ_group, levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"))
+
+print(names(df))
+
+#Removing NA/ 0 INCOME
+df <- na.omit(df)
+df <- df[df$total_income > 0, ]
+```
+
+
+
+
 # DEA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
 
+
 1. Statistics summary, plot 
+
+```{r }
+
+#  Income distribution
+par(mfrow = c(1, 1)) 
+
+hist(df$total_income, 
+     breaks = 100, 
+     xlim = c(0, 350000),
+     main = "Distribution of Annual Income (Zoomed to $0-$350k)",
+     xlab = "Annual Income ($)",
+     ylab = "Frequency",
+     col = "cadetblue",
+     border = "white")
+
+# Income by Education level
+boxplot(total_income ~ educ_group, data = df,
+        main = "Income Ranges by Education Level",
+        xlab = "Education Level",
+        ylab = "Annual Income ($)",
+        col = "lightblue",
+        outline = FALSE, 
+        las = 1) 
+
+# Median Income
+income_by_educ <- aggregate(total_income ~ educ_group, data = df, FUN = median)
+print(income_by_educ)
+
+# Gender income difference by education
+par(mar = c(8, 4, 4, 2))
+boxplot(total_income ~ gender * educ_group, data = df,
+        main = "Gender Pay Gap by Education",
+        xlab='',
+        ylab = "Annual Income ($)",
+        col = c("cornflowerblue", "pink"), # Mavi=Erkek, Pembe=Kadın
+        outline = FALSE,
+        las = 2, 
+        cex.axis = 0.7) # Yazı boyutunu biraz küçült
+
+legend("topleft", legend = c("Male", "Female"), 
+       fill = c("cornflowerblue", "pink"), bty = "n")
+
+# Categoric
+par(mfrow = c(1, 2)) 
+
+# Education
+educ_counts <- table(df$educ_group)
+barplot(educ_counts, 
+        main = "Sample Size by Education",
+        col = "orange",
+        las = 2,
+        cex.names = 0.7)
+
+# Race
+race_counts <- sort(table(df$race), decreasing = FALSE) 
+par(mar=c(5, 6, 4, 1)) 
+barplot(race_counts, 
+        main = "Racial Composition", 
+        xlim = c(0,100000),
+        horiz = TRUE, 
+        col = "lightgray",
+        las = 1,
+        cex.names = 0.7)
+
+par(mfrow = c(1, 1)) 
+par(mar=c(5, 4, 4, 2) + 0.1)
+```
 
 2. Normal distribution test
 
 3. Hypothesis testing 
 
-# Regression - Constantine
+# Regression
 
 1. Plot of correlation
 
