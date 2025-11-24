@@ -115,7 +115,7 @@ par(mfrow = c(1, 1))
 hist(df$total_income, 
      breaks = 100, 
      xlim = c(0, 350000),
-     main = "Distribution of Annual Income (Zoomed to $0-$350k)",
+     main = "Distribution of Annual Income",
      xlab = "Annual Income ($)",
      ylab = "Frequency",
      col = "cadetblue",
@@ -169,14 +169,77 @@ barplot(race_counts,
         col = "lightgray",
         las = 1,
         cex.names = 0.7)
-
-par(mfrow = c(1, 1)) 
-par(mar=c(5, 4, 4, 2) + 0.1)
 ```
 
 2. Normal distribution test
 
 3. Hypothesis testing 
+
+
+# ANOVA (Analysis of Variance) - FOR EDUCATION LEVELS
+ 
+ Research Question: Does education level result in a statistically significant difference in income?
+ 
+ H0 (Null Hypothesis): The mean income of all education groups is equal.
+ 
+ H1 (Alternative Hypothesis): At least one group's income is different from the others.
+
+```{r }
+
+anova <- aov(log(total_income) ~ educ_group, data = df)
+
+print(summary(anova))
+```
+
+A one-way ANOVA test was conducted to determine if education level creates a statistically significant difference in income. The results indicate a strong relationship, with a high F-value ($13,868$) and a p-value of less than 0.001. Because the p-value is extremely low, we reject the null hypothesis and confirm that income levels vary significantly across education groups. However, since the ANOVA does not specify which groups differ, a post-hoc test is required to identify the specific differences.
+
+```{r }
+tukey<- TukeyHSD(anova)
+
+print(tukey)
+
+par(mar=c(5, 15, 4, 2)) 
+plot(tukey, las=1, col="red")
+
+```
+
+The results show that every single pairwise comparison is statistically significant. This confirms a clear hierarchy in earnings: those with 'High School or Less' earn the lowest, followed by 'Some College' and 'Bachelor's', while the 'Post-Grad' group has the highest income. In short, each step up in education level results in a statistically significant increase in total income.
+
+# T-Test (Independent Samples) - FOR GENDER
+ 
+ Research Question: Is there a difference between the mean incomes of males and females?
+ 
+ H0 (Null Hypothesis): The mean incomes of males and females are EQUAL.
+ 
+ H1 (Alternative Hypothesis): The mean incomes of males and females are NOT EQUAL.
+
+
+```{r }
+
+t_test <- t.test(log(total_income) ~ gender, data = df)
+print(t_test)
+```
+
+A Welch Two Sample t-test was conducted to compare the average incomes of male and female groups. The results indicate a highly significant difference between the two genders ($t = 88, p < 0.001$). The analysis shows that the average log-income for males ($10.8$) is higher than the average log-income for females ($10.3$). Additionally, the 95% confidence interval is entirely positive ($0.46$ to $0.48$), which confirms that males consistently earn more than females in this dataset. Based on this, the null hypothesis is rejected.
+
+
+# Pearson Correlation Test - income vs county gdp
+
+Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their county?
+
+H0 (Null Hypothesis): There is NO linear correlation between individual income and county-level GDP.
+ 
+H1 (Alternative Hypothesis): There is a statistically significant linear correlation between individual income and county-level GDP.
+
+```{r }
+cor_test <- cor.test(log(df$total_income), log(df$county_gdp), method = "pearson")
+print(cor_test)
+
+```
+
+A Pearson correlation test was conducted to examine the relationship between county-level GDP and individual total income. 
+
+The results show a statistically significant relationship ($t = 14, p < 0.001$). However, the correlation coefficient is extremely low ($r = 0.03$). This indicates that although there is a positive association between the wealth of a region and personal income, the relationship is negligible. In other words, living in a richer county has almost no direct impact on an individual's income in this dataset.
 
 # Regression
 
