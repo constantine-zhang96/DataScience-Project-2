@@ -19,77 +19,72 @@ output:
 ```{r library, include = FALSE}
 library(tidyverse)
 library(haven)
+library(rpart)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
                       fig.width=8, fig.height=6, fig.dim=c(8,6), fig.align='center')
 options(scientific=T, digits = 3,scipen = 999)
 ```
-```{r data, include = FALSE}
-acs2023 <- read.csv("acs2023.csv")
-```
-# Literature Review - Ha
 
-```{r }
-acs_raw <- read.csv("acs2023.csv")
-df <- acs_raw # copy
-
+```{r import, include = FALSE}
+df <- read.csv("acs2023.csv")
 
 #Renaming
 
 names(df)[names(df) == "inctot"]           <- "total_income"
-names(df)[names(df) == "real_gdp"]         <- "county_gdp"
-names(df)[names(df) == "real_pc_income"]   <- "county_pc_income"
-names(df)[names(df) == "total_employment"] <- "county_total_jobs"
+names(df)[names(df) == "real_gdp"]         <- "state_real_gdp"
+names(df)[names(df) == "real_pc_income"]   <- "state_pc_income"
+names(df)[names(df) == "total_employment"] <- "state_total_jobs"
 
-names(df)[names(df) == "educ"]     <- "education_code"
+names(df)[names(df) == "educ"]     <- "education"
 names(df)[names(df) == "age"]      <- "age"              
-names(df)[names(df) == "sex"]      <- "gender_code"
-names(df)[names(df) == "race"]     <- "race_code"
-names(df)[names(df) == "marst"]    <- "marital_status_code"
+names(df)[names(df) == "sex"]      <- "gender"
+names(df)[names(df) == "race"]     <- "race"
+names(df)[names(df) == "marst"]    <- "marital_status"
 names(df)[names(df) == "nchild"]   <- "num_children"
-names(df)[names(df) == "citizen"]  <- "citizenship_code"      
-names(df)[names(df) == "empstat"]  <- "employment_status_code" 
-names(df)[names(df) == "labforce"] <- "labor_force_code"       
+names(df)[names(df) == "citizen"]  <- "citizenship"      
+names(df)[names(df) == "empstat"]  <- "employment_status" 
+names(df)[names(df) == "labforce"] <- "labor_force"       
 names(df)[names(df) == "perwt"]    <- "person_weight"
 
 #Factor changes
 
-df$gender <- factor(df$gender_code, 
+df$gender <- factor(df$gender, 
                     levels = c(1, 2), 
                     labels = c("Male", "Female"))
 
-df$marital_status <- factor(df$marital_status_code, levels = 1:6, 
+df$marital_status <- factor(df$marital_status, levels = 1:6, 
                             labels = c("Married (Present)", "Married (Absent)", 
                                        "Separated", "Divorced", "Widowed", "Single"))
 
 
-df$race <- factor(df$race_code, levels = 1:6,
+df$race <- factor(df$race, levels = 1:6,
                   labels = c("White", "Black", "Native American", 
                              "Chinese", "Japanese", "Other Asian/Pacific"))
 
-df$citizenship <- factor(df$citizenship_code, levels = 1:3,
+df$citizenship <- factor(df$citizenship, levels = 1:3,
                          labels = c("Born Abroad (US Parents)", 
                                     "Naturalized Citizen", 
                                     "Not a Citizen"))
 
-df$employment_status <- factor(df$employment_status_code, levels = 1:3,
+df$employment_status <- factor(df$employment_status, levels = 1:3,
                                labels = c("Employed", "Unemployed", "Not in Labor Force"))
 
-df$labor_force <- factor(df$labor_force_code, levels = 1:2,
+df$labor_force <- factor(df$labor_force, levels = 1:2,
                          labels = c("Not in Labor Force", "In Labor Force"))
 
 
-df$education_level <- factor(df$education_code, levels = 1:11,
+df$education_level <- factor(df$education, levels = 1:11,
                              labels = c("Nursery-Gr4", "Gr5-8", "Gr9", "Gr10", "Gr11", "Gr12",
                                         "1yr College", "2yr College", "3yr College", "4yr College", "5+yr College"))
 
 
 df$educ_group <- NA
-df$educ_group[df$education_code <= 6] <- "HS or Less"
-df$educ_group[df$education_code %in% c(7, 8, 9)] <- "Some College"
-df$educ_group[df$education_code == 10] <- "Bachelor's"
-df$educ_group[df$education_code == 11] <- "Post-Grad"
+df$educ_group[df$education <= 6] <- "HS or Less"
+df$educ_group[df$education %in% c(7, 8, 9)] <- "Some College"
+df$educ_group[df$education == 10] <- "Bachelor's"
+df$educ_group[df$education == 11] <- "Post-Grad"
 df$educ_group <- factor(df$educ_group, levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"))
 
 print(names(df))
@@ -100,7 +95,15 @@ df <- df[df$total_income > 0, ]
 ```
 
 
+# Literature review
 
+Research on the return to education consistently finds that higher educational attainment is strongly linked to higher earnings. Card (1999) provides a foundational analysis using U.S. microdata and shows that each additional year of schooling is associated with meaningful increases in annual income after accounting for demographic factors. This directly supports the project’s focus on identifying income gains from education using ACS microdata.
+
+A second strand of research examines how these returns vary across demographic groups and regions. Autor (2014) documents that changes in technology and labor-market structure have increased the skill premium and widened income gaps between workers with different education levels. His findings motivate the project’s subgroup analysis using variables such as gender, race and nativity within the ACS.
+
+A third group of studies highlights the importance of state-level economic conditions. Moretti (2004) shows that regional economic indicators such as productivity growth, employment structure and industry composition influence the strength of educational returns. Studies using BEA state-level data similarly find that macroeconomic variables like real GDP, income growth and employment conditions shape workers’ income trajectories. These insights justify incorporating BEA macroeconomic variables into the analysis to understand how state-level conditions moderate the effect of education on income.
+
+Together, these studies support the project’s integrated approach of combining American Community Survey (ACS) microdata with U.S. Bureau of Economic Analysis (BEA) State Annual Summary Statistics: Personal Income, GDP, Consumer Spending, Price Indexes, and Employment (real GDP, GDP per capita and number of employments) in year 2023 to capture both individual and regional determinants of income.
 
 # EDA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
 
@@ -223,23 +226,23 @@ print(t_test)
 A Welch Two Sample t-test was conducted to compare the average incomes of male and female groups. The results indicate a highly significant difference between the two genders ($t = 88, p < 0.001$). The analysis shows that the average log-income for males ($10.8$) is higher than the average log-income for females ($10.3$). Additionally, the 95% confidence interval is entirely positive ($0.46$ to $0.48$), which confirms that males consistently earn more than females in this dataset. Based on this, the null hypothesis is rejected.
 
 
-# Pearson Correlation Test - income vs county gdp
+# Pearson Correlation Test - income vs state gdp
 
-Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their county?
+Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their state?
 
-H0 (Null Hypothesis): There is NO linear correlation between individual income and county-level GDP.
+H0 (Null Hypothesis): There is NO linear correlation between individual income and state-level GDP.
  
-H1 (Alternative Hypothesis): There is a statistically significant linear correlation between individual income and county-level GDP.
+H1 (Alternative Hypothesis): There is a statistically significant linear correlation between individual income and state-level GDP.
 
 ```{r }
-cor_test <- cor.test(log(df$total_income), log(df$county_gdp), method = "pearson")
+cor_test <- cor.test(log(df$total_income), log(df$state_real_gdp), method = "pearson")
 print(cor_test)
 
 ```
 
-A Pearson correlation test was conducted to examine the relationship between county-level GDP and individual total income. 
+A Pearson correlation test was conducted to examine the relationship between state-level GDP and individual total income. 
 
-The results show a statistically significant relationship ($t = 14, p < 0.001$). However, the correlation coefficient is extremely low ($r = 0.03$). This indicates that although there is a positive association between the wealth of a region and personal income, the relationship is negligible. In other words, living in a richer county has almost no direct impact on an individual's income in this dataset.
+The results show a statistically significant relationship ($t = 14, p < 0.001$). However, the correlation coefficient is extremely low ($r = 0.03$). This indicates that although there is a positive association between the wealth of a region and personal income, the relationship is negligible. In other words, living in a richer state has almost no direct impact on an individual's income in this dataset.
 
 # Regression
 
@@ -257,4 +260,29 @@ The results show a statistically significant relationship ($t = 14, p < 0.001$).
 
 - ROC/AUC
 
-# Machine learning
+# Tree-based model
+
+```{r tree 1}
+set.seed(1)
+income_regression <- rpart(total_income ~ education + num_children + gender + age + marital_status + race + citizenship + log(state_real_gdp) + log(state_total_jobs), data=df, method="anova", control = list(maxdepth = 7) )
+```
+
+```{r summary tree}
+summary(income_regression) # detailed summary of splits
+```
+```{r plot tree 1}
+library(rpart.plot)
+rpart.plot(income_regression)
+```
+# Reference
+
+Autor, D. H. (2014). Skills, education, and the rise of earnings inequality among the other 99 percent. Science, 344(6186), 843–851. https://doi.org/10.1126/science.1251868
+
+Card, D. (1999). The causal effect of education on earnings. In O. Ashenfelter & D. Card (Eds.), Handbook of labor economics (Vol. 3, pp. 1801–1863). Elsevier.
+
+Moretti, E. (2004). Human capital externalities in cities. In J. V. Henderson & J.-F. Thisse (Eds.), Handbook of regional and urban economics (Vol. 4, pp. 2243–2291). Elsevier. https://doi.org/10.1016/S1574-0080(04)80014-4
+
+Ruggles, S., Flood, S., Sobek, M., Backman, D., Cooper, G., Rivera Drew, J. A., Richards, S., Rodgers, R., Schroeder, J., & Williams, K. C. W. (2025). IPUMS USA: Version 16.0 [ACS 1-year microdata for 2023]. IPUMS. https://doi.org/10.18128/D010.V16.0
+
+U.S. Bureau of Economic Analysis. (2023). State Annual Summary Statistics: Personal Income, GDP, Consumer Spending, Price Indexes, and Employment. U.S. Department of Commerce. Retrieved from https://apps.bea.gov/regional/downloadzip.htm
+
