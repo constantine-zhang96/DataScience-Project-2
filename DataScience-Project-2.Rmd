@@ -102,7 +102,7 @@ df <- df[df$total_income > 0, ]
 
 
 
-# DEA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
+# EDA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
 
 
 1. Statistics summary, plot 
@@ -256,3 +256,5 @@ The results show a statistically significant relationship ($t = 14, p < 0.001$).
 - Anova Test between models (remove controlling variables)
 
 - ROC/AUC
+
+# Machine learning
