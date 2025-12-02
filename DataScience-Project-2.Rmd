@@ -123,7 +123,11 @@ hist(df$total_income,
      ylab = "Frequency",
      col = "cadetblue",
      border = "white")
+```
 
+The histogram is right-skewed, showing that most incomes are low while a few high-income outliers form a long tail to the right. Because these outliers pull the mean upward, the median is a more accurate measure of the typical income.
+
+```{r }
 # Income by Education level
 boxplot(total_income ~ educ_group, data = df,
         main = "Income Ranges by Education Level",
@@ -136,7 +140,11 @@ boxplot(total_income ~ educ_group, data = df,
 # Median Income
 income_by_educ <- aggregate(total_income ~ educ_group, data = df, FUN = median)
 print(income_by_educ)
+```
 
+The boxplots shows a clear positive link between education and income. As education levels rise, the median income consistently increases. However, the variance of salaries also gets much wider with higher education. While high school graduates earn within a narrow, consistent range, the "Post-Grad" group has a very tall box and long whiskers, indicating a huge gap between the lowest and highest earners in that category.
+
+```{r }
 # Gender income difference by education
 par(mar = c(8, 4, 4, 2))
 boxplot(total_income ~ gender * educ_group, data = df,
@@ -151,6 +159,12 @@ boxplot(total_income ~ gender * educ_group, data = df,
 legend("topleft", legend = c("Male", "Female"), 
        fill = c("cornflowerblue", "pink"), bty = "n")
 
+
+```
+
+The graph compares incomes for men and women across different education levels. It clearly shows that in every category, men have a higher median income than women. This pay gap gets much wider as education levels rise. While the difference is smaller for high school graduates, it becomes very large for the "Post-Grad" group, where men earn significantly more than women even with the same level of education.
+
+```{r }
 # Categoric
 par(mfrow = c(1, 2)) 
 
@@ -162,6 +176,12 @@ barplot(educ_counts,
         las = 2,
         cex.names = 0.7)
 
+
+```
+
+This chart counts how many people in the study have different levels of education. The biggest group is people with a high school education or less. The smallest group is people with only some college experience.
+
+```{r }
 # Race
 race_counts <- sort(table(df$race), decreasing = FALSE) 
 par(mar=c(5, 6, 4, 1)) 
@@ -173,6 +193,9 @@ barplot(race_counts,
         las = 1,
         cex.names = 0.7)
 ```
+
+This chart shows the race of the people in the study. The vast majority of people are White or from the "Other Asian/Pacific" group. On the other hand, there are very few Native American or Japanese participants.
+
 
 2. Normal distribution test
 
