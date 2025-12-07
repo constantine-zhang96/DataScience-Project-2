@@ -328,14 +328,127 @@ summary(model1)
 
 # Tree-based model
 
+## Grow the tree by each level of education attain
+
+Convert education to categorical so rpart can split them properly.
+
+- Outcome: total_income (continuous)
+
+- Model type: regression tree (uses MSE minimization) as between continous dependent variable and mixed independent variable
+
+- Predictors:
+
+  - Demographics: education, gender, age, marital status, race, citizenship
+
+  - Family: number of children
+
+  - State macro controls: log GDP, log jobs
+
+  - maxdepth = 7: tree can grow up to 7 levels deep
+  
 ```{r tree 1}
 set.seed(1)
-income_regression <- rpart(total_income ~ education + num_children + gender + age + marital_status + race + citizenship + log(state_real_gdp) + log(state_total_jobs), data=df, method="anova", control = list(maxdepth = 7) )
+
+df <- df %>%
+  mutate(education_cat = factor(education))
+
+summary(df$education_cat)
+```
+```{r tree 2}
+income_regression <- rpart(total_income ~ education_cat + num_children + gender + age + marital_status + race + citizenship + log(state_real_gdp) + log(state_total_jobs), data=df, method="anova", control = list(maxdepth = 7) )
 ```
 
 ```{r summary tree}
 summary(income_regression) 
 ```
+1. CP Table (How Much Each Split Helps)
+
+CP nsplit rel error xerror    xstd
+1 0.1085      0     1.000  1.000 0.01010
+2 0.0302      1     0.892  0.892 0.00927
+3 0.0172      2     0.861  0.861 0.00909
+4 0.0100      3     0.844  0.844 0.00891
+
+
+Start error = 1.000
+
+After first split: error → 0.892 (−11%)
+
+After second split: error → 0.861
+
+After third split: error → 0.844
+
+Interpretation:
+
+The first split is by far the strongest (education).
+
+Additional splits reduce error but with much smaller gains.
+
+2. Variable Importance
+
+Education explains 88% of all the splitting power of the tree.
+
+Gender adds 11%.
+
+Everything else combined = 1%.
+
+3. Root Node (Before Any Split)
+
+**Node 1:**
+n = 229,342
+mean = 75,800
+MSE = 1.02e+10
+
+The average total income in the whole dataset is $75.8k.
+
+MSE is large because incomes vary a lot (normal).
+
+**Node 2:**
+
+Observation: 172,509 obs (lower-education group)
+
+Income levels: $56,700
+
+Even within the "lower education" categories, education still matters.
+
+Each level increments income:
+
+HS < Some College < Bachelor’s < (but Bachelor’s still partly in Node 3 9,11 - 3 years college and 5+ years)
+
+**Node 3:**
+
+- Right son (Node 3): 56,833 obs (higher-education group)
+
+- Node 3 mean = $134,000
+
+- continue split with gender, improve = 0.0361
+
+Interpretation:
+
+Among highly educated people:
+
+Gender becomes the next major income divider.
+
+This means men and women with the same high education credentials earn significantly different incomes.
+
+**Node 4:**
+
+Lowest-education group → $41k average income
+→ Probably HS or less + young or single
+
+**Node 5:**
+
+Mid-education → $84k
+→ Maybe Bachelor’s or some college groups
+
+**Node 6:**
+
+High education + Female → $105k
+
+**Node 7:**
+
+High education + Male → $158k
+→ This is the high-education/male cluster: highest earners.
 
 ```{r plot tree 1}
 library(rpart.plot)
@@ -349,6 +462,76 @@ rpart.plot(
   tweak = 1.1        
 )
 ```
+**Overall Takeaway**
+
+1. Education is the overwhelmingly strongest predictor of income.
+
+It defines the first split and most of the structure.
+
+2. Gender is the second-most important variable.
+
+Especially for high education groups.
+
+3. State-level economics barely affect individual income.
+
+The tree almost never splits on log(state_real_gdp) or state_total_jobs.
+
+## Prune the Tree
+
+We can "prune" the tree to reduce variance. A plot can be made after pruning, showing the effects in terms of deviance or other statistics.
+
+```{r prune}
+library(rattle)
+
+print(income_regression$cptable)
+plotcp(income_regression)
+income_prune<- prune(income_regression, cp = income_regression$cptable[3,"CP"])
+fancyRpartPlot(income_prune)
+```
+The graph shows the result with different number of terminal/leaf nodes on the x (tree size), and the cross-validated prediction error value of the model on the y. 
+
+# Train/Test Split with Tree Pruning Evaluation”
+
+Set 5 fold
+
+1. First fold Cross-Validation (1-fold CV) for Pruning
+
+```{r, results="markup"}
+set.seed(1)
+df$fold <- floor(runif(nrow(df), 1, 11))
+test.set <- df[df$fold == 1, ]
+train.set <- df[df$fold != 1, ]
+```
+
+```{r train}
+treefit_fold <- rpart(total_income ~ education_cat + num_children + gender + age +
+                     marital_status + race + citizenship +
+                     log(state_real_gdp) + log(state_total_jobs),
+                     data = train.set,
+                     method = "anova",
+                     control = list(maxdepth = 7))
+fancyRpartPlot(treefit_fold)
+```
+
+```{r predict}
+pred <- predict(treefit_fold, test.set)
+plot(pred,test.set$total_income, main="Predicted vs. Observed Total Income", xlab="Tree Predicted Salary", ylab="Observed Salary")
+treefit_fold_error <- sum((pred - test.set$total_income)^2)
+treefit_fold_error
+```
+
+```{r prune the tree}
+treefit_fold_prune <- prune(treefit_fold,
+                            cp = treefit_fold$cptable[3, "CP"])
+
+pred2 <- predict(treefit_fold_prune, test.set)
+plot(pred2,test.set$total_income, main="Predicted vs. Observed Total Income", xlab="Tree Predicted Salary", ylab="Observed Salary")
+treefit_fold_prune_error <- sum((pred2 - test.set$total_income)^2)
+treefit_fold_prune_error
+```
+
+Prune model has more error, but this is just the first fold!.
+
 # Reference
 
 Autor, D. H. (2014). Skills, education, and the rise of earnings inequality among the other 99 percent. Science, 344(6186), 843–851. https://doi.org/10.1126/science.1251868
