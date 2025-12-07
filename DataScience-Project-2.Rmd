@@ -19,6 +19,10 @@ output:
 ```{r library, include = FALSE}
 library(tidyverse)
 library(haven)
+library(corrplot)
+library(ggplot2)
+library(reshape2)
+library(lsr)
 library(rpart)
 ```
 ```{r setup, include=FALSE}
@@ -27,8 +31,15 @@ knitr::opts_chunk$set(results="markup", warning = F, message = F,
 options(scientific=T, digits = 3,scipen = 999)
 ```
 
-```{r import, include = FALSE}
-df <- read.csv("acs2023.csv")
+```{r data, include = FALSE}
+acs2023 <- read.csv("acs2023.csv")
+```
+# Literature Review - Ha
+
+```{r }
+acs_raw <- read.csv("acs2023.csv")
+df <- acs_raw # copy
+
 
 #Renaming
 
@@ -95,17 +106,9 @@ df <- df[df$total_income > 0, ]
 ```
 
 
-# Literature review
 
-Research on the return to education consistently finds that higher educational attainment is strongly linked to higher earnings. Card (1999) provides a foundational analysis using U.S. microdata and shows that each additional year of schooling is associated with meaningful increases in annual income after accounting for demographic factors. This directly supports the project’s focus on identifying income gains from education using ACS microdata.
 
-A second strand of research examines how these returns vary across demographic groups and regions. Autor (2014) documents that changes in technology and labor-market structure have increased the skill premium and widened income gaps between workers with different education levels. His findings motivate the project’s subgroup analysis using variables such as gender, race and nativity within the ACS.
-
-A third group of studies highlights the importance of state-level economic conditions. Moretti (2004) shows that regional economic indicators such as productivity growth, employment structure and industry composition influence the strength of educational returns. Studies using BEA state-level data similarly find that macroeconomic variables like real GDP, income growth and employment conditions shape workers’ income trajectories. These insights justify incorporating BEA macroeconomic variables into the analysis to understand how state-level conditions moderate the effect of education on income.
-
-Together, these studies support the project’s integrated approach of combining American Community Survey (ACS) microdata with U.S. Bureau of Economic Analysis (BEA) State Annual Summary Statistics: Personal Income, GDP, Consumer Spending, Price Indexes, and Employment (real GDP, GDP per capita and number of employments) in year 2023 to capture both individual and regional determinants of income.
-
-# EDA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
+# DEA - based on the smart questions in the proposal - for this survey, we can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
 
 
 1. Statistics summary, plot 
@@ -123,7 +126,11 @@ hist(df$total_income,
      ylab = "Frequency",
      col = "cadetblue",
      border = "white")
+```
 
+The histogram is right-skewed, showing that most incomes are low while a few high-income outliers form a long tail to the right. Because these outliers pull the mean upward, the median is a more accurate measure of the typical income.
+
+```{r }
 # Income by Education level
 boxplot(total_income ~ educ_group, data = df,
         main = "Income Ranges by Education Level",
@@ -136,7 +143,11 @@ boxplot(total_income ~ educ_group, data = df,
 # Median Income
 income_by_educ <- aggregate(total_income ~ educ_group, data = df, FUN = median)
 print(income_by_educ)
+```
 
+The boxplots shows a clear positive link between education and income. As education levels rise, the median income consistently increases. However, the variance of salaries also gets much wider with higher education. While high school graduates earn within a narrow, consistent range, the "Post-Grad" group has a very tall box and long whiskers, indicating a huge gap between the lowest and highest earners in that category.
+
+```{r }
 # Gender income difference by education
 par(mar = c(8, 4, 4, 2))
 boxplot(total_income ~ gender * educ_group, data = df,
@@ -151,6 +162,12 @@ boxplot(total_income ~ gender * educ_group, data = df,
 legend("topleft", legend = c("Male", "Female"), 
        fill = c("cornflowerblue", "pink"), bty = "n")
 
+
+```
+
+The graph compares incomes for men and women across different education levels. It clearly shows that in every category, men have a higher median income than women. This pay gap gets much wider as education levels rise. While the difference is smaller for high school graduates, it becomes very large for the "Post-Grad" group, where men earn significantly more than women even with the same level of education.
+
+```{r }
 # Categoric
 par(mfrow = c(1, 2)) 
 
@@ -162,6 +179,12 @@ barplot(educ_counts,
         las = 2,
         cex.names = 0.7)
 
+
+```
+
+This chart counts how many people in the study have different levels of education. The biggest group is people with a high school education or less. The smallest group is people with only some college experience.
+
+```{r }
 # Race
 race_counts <- sort(table(df$race), decreasing = FALSE) 
 par(mar=c(5, 6, 4, 1)) 
@@ -173,6 +196,9 @@ barplot(race_counts,
         las = 1,
         cex.names = 0.7)
 ```
+
+This chart shows the race of the people in the study. The vast majority of people are White or from the "Other Asian/Pacific" group. On the other hand, there are very few Native American or Japanese participants.
+
 
 2. Normal distribution test
 
@@ -248,7 +274,47 @@ The results show a statistically significant relationship ($t = 14, p < 0.001$).
 
 1. Plot of correlation
 
+To explore main explanatory variable education level against main dependent variable real per capital income, we fiest look at the correlation plot between these two variables.  
+
+Because our main explanatory variable is categorical variable, we be using correlation matrix for this section. 
+
+For numerical variable and categorical, we need to use Eta method to determine the correlation.
+
+```{r}
+etaSquared(aov( total_income ~ education_level, data = df))
+eta_value <- function(cat, num) {
+  as.numeric(etaSquared(aov(num ~ cat))[1])
+}
+
+eta_value(df$education_level, df$total_income)
+```
+
+This result imply that education level explains 14.1% of the variation in total income. This is on the threshold of large effect which means education level has a meaningful and strong association with persoanl total income. 
+
 2. Run regression
+
+```{r linear regression without control}
+model1 <- lm( total_income ~ education_level, data = df)
+summary(model1)
+```
+Our regression estimation for simple linear regression is:
+
+total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*Grade10 + 1269*Grade11 + 12964*Grade12 + 20261*1 year College + 25400*2 year college + 57307*4 year college + 106864* 5 or more year college 
+
+
+Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legaly full time. 
+
+```{r linear regression with control for gender, age, and race}
+model2 <- lm( total_income ~ education_level + gender_code + race_code + age , data = df)
+summary(model2)
+```
+
+```{r linear regression with control for gender, age, and race}
+model1 <- lm( total_income ~ education_level * age + education_level * gender_code + education_level * race_code + age + race_code, data = df)
+summary(model1)
+
+
+```
 
 3. Test the fit of the regression
 
