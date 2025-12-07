@@ -23,6 +23,7 @@ library(corrplot)
 library(ggplot2)
 library(reshape2)
 library(lsr)
+library(rpart)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
@@ -43,58 +44,58 @@ df <- acs_raw # copy
 #Renaming
 
 names(df)[names(df) == "inctot"]           <- "total_income"
-names(df)[names(df) == "real_gdp"]         <- "county_gdp"
-names(df)[names(df) == "real_pc_income"]   <- "county_pc_income"
-names(df)[names(df) == "total_employment"] <- "county_total_jobs"
+names(df)[names(df) == "real_gdp"]         <- "state_real_gdp"
+names(df)[names(df) == "real_pc_income"]   <- "state_pc_income"
+names(df)[names(df) == "total_employment"] <- "state_total_jobs"
 
-names(df)[names(df) == "educ"]     <- "education_code"
+names(df)[names(df) == "educ"]     <- "education"
 names(df)[names(df) == "age"]      <- "age"              
-names(df)[names(df) == "sex"]      <- "gender_code"
-names(df)[names(df) == "race"]     <- "race_code"
-names(df)[names(df) == "marst"]    <- "marital_status_code"
+names(df)[names(df) == "sex"]      <- "gender"
+names(df)[names(df) == "race"]     <- "race"
+names(df)[names(df) == "marst"]    <- "marital_status"
 names(df)[names(df) == "nchild"]   <- "num_children"
-names(df)[names(df) == "citizen"]  <- "citizenship_code"      
-names(df)[names(df) == "empstat"]  <- "employment_status_code" 
-names(df)[names(df) == "labforce"] <- "labor_force_code"       
+names(df)[names(df) == "citizen"]  <- "citizenship"      
+names(df)[names(df) == "empstat"]  <- "employment_status" 
+names(df)[names(df) == "labforce"] <- "labor_force"       
 names(df)[names(df) == "perwt"]    <- "person_weight"
 
 #Factor changes
 
-df$gender <- factor(df$gender_code, 
+df$gender <- factor(df$gender, 
                     levels = c(1, 2), 
                     labels = c("Male", "Female"))
 
-df$marital_status <- factor(df$marital_status_code, levels = 1:6, 
+df$marital_status <- factor(df$marital_status, levels = 1:6, 
                             labels = c("Married (Present)", "Married (Absent)", 
                                        "Separated", "Divorced", "Widowed", "Single"))
 
 
-df$race <- factor(df$race_code, levels = 1:6,
+df$race <- factor(df$race, levels = 1:6,
                   labels = c("White", "Black", "Native American", 
                              "Chinese", "Japanese", "Other Asian/Pacific"))
 
-df$citizenship <- factor(df$citizenship_code, levels = 1:3,
+df$citizenship <- factor(df$citizenship, levels = 1:3,
                          labels = c("Born Abroad (US Parents)", 
                                     "Naturalized Citizen", 
                                     "Not a Citizen"))
 
-df$employment_status <- factor(df$employment_status_code, levels = 1:3,
+df$employment_status <- factor(df$employment_status, levels = 1:3,
                                labels = c("Employed", "Unemployed", "Not in Labor Force"))
 
-df$labor_force <- factor(df$labor_force_code, levels = 1:2,
+df$labor_force <- factor(df$labor_force, levels = 1:2,
                          labels = c("Not in Labor Force", "In Labor Force"))
 
 
-df$education_level <- factor(df$education_code, levels = 1:11,
+df$education_level <- factor(df$education, levels = 1:11,
                              labels = c("Nursery-Gr4", "Gr5-8", "Gr9", "Gr10", "Gr11", "Gr12",
                                         "1yr College", "2yr College", "3yr College", "4yr College", "5+yr College"))
 
 
 df$educ_group <- NA
-df$educ_group[df$education_code <= 6] <- "HS or Less"
-df$educ_group[df$education_code %in% c(7, 8, 9)] <- "Some College"
-df$educ_group[df$education_code == 10] <- "Bachelor's"
-df$educ_group[df$education_code == 11] <- "Post-Grad"
+df$educ_group[df$education <= 6] <- "HS or Less"
+df$educ_group[df$education %in% c(7, 8, 9)] <- "Some College"
+df$educ_group[df$education == 10] <- "Bachelor's"
+df$educ_group[df$education == 11] <- "Post-Grad"
 df$educ_group <- factor(df$educ_group, levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"))
 
 print(names(df))
@@ -125,7 +126,11 @@ hist(df$total_income,
      ylab = "Frequency",
      col = "cadetblue",
      border = "white")
+```
 
+The histogram is right-skewed, showing that most incomes are low while a few high-income outliers form a long tail to the right. Because these outliers pull the mean upward, the median is a more accurate measure of the typical income.
+
+```{r }
 # Income by Education level
 boxplot(total_income ~ educ_group, data = df,
         main = "Income Ranges by Education Level",
@@ -138,7 +143,11 @@ boxplot(total_income ~ educ_group, data = df,
 # Median Income
 income_by_educ <- aggregate(total_income ~ educ_group, data = df, FUN = median)
 print(income_by_educ)
+```
 
+The boxplots shows a clear positive link between education and income. As education levels rise, the median income consistently increases. However, the variance of salaries also gets much wider with higher education. While high school graduates earn within a narrow, consistent range, the "Post-Grad" group has a very tall box and long whiskers, indicating a huge gap between the lowest and highest earners in that category.
+
+```{r }
 # Gender income difference by education
 par(mar = c(8, 4, 4, 2))
 boxplot(total_income ~ gender * educ_group, data = df,
@@ -153,6 +162,12 @@ boxplot(total_income ~ gender * educ_group, data = df,
 legend("topleft", legend = c("Male", "Female"), 
        fill = c("cornflowerblue", "pink"), bty = "n")
 
+
+```
+
+The graph compares incomes for men and women across different education levels. It clearly shows that in every category, men have a higher median income than women. This pay gap gets much wider as education levels rise. While the difference is smaller for high school graduates, it becomes very large for the "Post-Grad" group, where men earn significantly more than women even with the same level of education.
+
+```{r }
 # Categoric
 par(mfrow = c(1, 2)) 
 
@@ -164,6 +179,12 @@ barplot(educ_counts,
         las = 2,
         cex.names = 0.7)
 
+
+```
+
+This chart counts how many people in the study have different levels of education. The biggest group is people with a high school education or less. The smallest group is people with only some college experience.
+
+```{r }
 # Race
 race_counts <- sort(table(df$race), decreasing = FALSE) 
 par(mar=c(5, 6, 4, 1)) 
@@ -175,6 +196,9 @@ barplot(race_counts,
         las = 1,
         cex.names = 0.7)
 ```
+
+This chart shows the race of the people in the study. The vast majority of people are White or from the "Other Asian/Pacific" group. On the other hand, there are very few Native American or Japanese participants.
+
 
 2. Normal distribution test
 
@@ -228,23 +252,23 @@ print(t_test)
 A Welch Two Sample t-test was conducted to compare the average incomes of male and female groups. The results indicate a highly significant difference between the two genders ($t = 88, p < 0.001$). The analysis shows that the average log-income for males ($10.8$) is higher than the average log-income for females ($10.3$). Additionally, the 95% confidence interval is entirely positive ($0.46$ to $0.48$), which confirms that males consistently earn more than females in this dataset. Based on this, the null hypothesis is rejected.
 
 
-# Pearson Correlation Test - income vs county gdp
+# Pearson Correlation Test - income vs state gdp
 
-Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their county?
+Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their state?
 
-H0 (Null Hypothesis): There is NO linear correlation between individual income and county-level GDP.
+H0 (Null Hypothesis): There is NO linear correlation between individual income and state-level GDP.
  
-H1 (Alternative Hypothesis): There is a statistically significant linear correlation between individual income and county-level GDP.
+H1 (Alternative Hypothesis): There is a statistically significant linear correlation between individual income and state-level GDP.
 
 ```{r }
-cor_test <- cor.test(log(df$total_income), log(df$county_gdp), method = "pearson")
+cor_test <- cor.test(log(df$total_income), log(df$state_real_gdp), method = "pearson")
 print(cor_test)
 
 ```
 
-A Pearson correlation test was conducted to examine the relationship between county-level GDP and individual total income. 
+A Pearson correlation test was conducted to examine the relationship between state-level GDP and individual total income. 
 
-The results show a statistically significant relationship ($t = 14, p < 0.001$). However, the correlation coefficient is extremely low ($r = 0.03$). This indicates that although there is a positive association between the wealth of a region and personal income, the relationship is negligible. In other words, living in a richer county has almost no direct impact on an individual's income in this dataset.
+The results show a statistically significant relationship ($t = 14, p < 0.001$). However, the correlation coefficient is extremely low ($r = 0.03$). This indicates that although there is a positive association between the wealth of a region and personal income, the relationship is negligible. In other words, living in a richer state has almost no direct impact on an individual's income in this dataset.
 
 # Regression
 
@@ -301,3 +325,30 @@ summary(model1)
 - Anova Test between models (remove controlling variables)
 
 - ROC/AUC
+
+# Tree-based model
+
+```{r tree 1}
+set.seed(1)
+income_regression <- rpart(total_income ~ education + num_children + gender + age + marital_status + race + citizenship + log(state_real_gdp) + log(state_total_jobs), data=df, method="anova", control = list(maxdepth = 7) )
+```
+
+```{r summary tree}
+summary(income_regression) # detailed summary of splits
+```
+```{r plot tree 1}
+library(rpart.plot)
+rpart.plot(income_regression)
+```
+# Reference
+
+Autor, D. H. (2014). Skills, education, and the rise of earnings inequality among the other 99 percent. Science, 344(6186), 843–851. https://doi.org/10.1126/science.1251868
+
+Card, D. (1999). The causal effect of education on earnings. In O. Ashenfelter & D. Card (Eds.), Handbook of labor economics (Vol. 3, pp. 1801–1863). Elsevier.
+
+Moretti, E. (2004). Human capital externalities in cities. In J. V. Henderson & J.-F. Thisse (Eds.), Handbook of regional and urban economics (Vol. 4, pp. 2243–2291). Elsevier. https://doi.org/10.1016/S1574-0080(04)80014-4
+
+Ruggles, S., Flood, S., Sobek, M., Backman, D., Cooper, G., Rivera Drew, J. A., Richards, S., Rodgers, R., Schroeder, J., & Williams, K. C. W. (2025). IPUMS USA: Version 16.0 [ACS 1-year microdata for 2023]. IPUMS. https://doi.org/10.18128/D010.V16.0
+
+U.S. Bureau of Economic Analysis. (2023). State Annual Summary Statistics: Personal Income, GDP, Consumer Spending, Price Indexes, and Employment. U.S. Department of Commerce. Retrieved from https://apps.bea.gov/regional/downloadzip.htm
+
