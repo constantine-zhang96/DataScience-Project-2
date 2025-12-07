@@ -19,12 +19,17 @@ output:
 ```{r library, include = FALSE}
 library(tidyverse)
 library(haven)
+library(corrplot)
+library(ggplot2)
+library(reshape2)
+library(lsr)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
                       fig.width=8, fig.height=6, fig.dim=c(8,6), fig.align='center')
 options(scientific=T, digits = 3,scipen = 999)
 ```
+
 ```{r data, include = FALSE}
 acs2023 <- read.csv("acs2023.csv")
 ```
@@ -102,7 +107,7 @@ df <- df[df$total_income > 0, ]
 
 
 
-# DEA - based on the smart questions in the proposal - for this survey, we will can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
+# DEA - based on the smart questions in the proposal - for this survey, we can calculate state level data + individual level data, try to think in both directions - deadline - before thanksgiving (Nov 27)
 
 
 1. Statistics summary, plot 
@@ -245,7 +250,47 @@ The results show a statistically significant relationship ($t = 14, p < 0.001$).
 
 1. Plot of correlation
 
+To explore main explanatory variable education level against main dependent variable real per capital income, we fiest look at the correlation plot between these two variables.  
+
+Because our main explanatory variable is categorical variable, we be using correlation matrix for this section. 
+
+For numerical variable and categorical, we need to use Eta method to determine the correlation.
+
+```{r}
+etaSquared(aov( total_income ~ education_level, data = df))
+eta_value <- function(cat, num) {
+  as.numeric(etaSquared(aov(num ~ cat))[1])
+}
+
+eta_value(df$education_level, df$total_income)
+```
+
+This result imply that education level explains 14.1% of the variation in total income. This is on the threshold of large effect which means education level has a meaningful and strong association with persoanl total income. 
+
 2. Run regression
+
+```{r linear regression without control}
+model1 <- lm( total_income ~ education_level, data = df)
+summary(model1)
+```
+Our regression estimation for simple linear regression is:
+
+total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*Grade10 + 1269*Grade11 + 12964*Grade12 + 20261*1 year College + 25400*2 year college + 57307*4 year college + 106864* 5 or more year college 
+
+
+Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legaly full time. 
+
+```{r linear regression with control for gender, age, and race}
+model2 <- lm( total_income ~ education_level + gender_code + race_code + age , data = df)
+summary(model2)
+```
+
+```{r linear regression with control for gender, age, and race}
+model1 <- lm( total_income ~ education_level * age + education_level * gender_code + education_level * race_code + age + race_code, data = df)
+summary(model1)
+
+
+```
 
 3. Test the fit of the regression
 
