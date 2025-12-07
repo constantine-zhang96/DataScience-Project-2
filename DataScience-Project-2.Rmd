@@ -268,11 +268,20 @@ income_regression <- rpart(total_income ~ education + num_children + gender + ag
 ```
 
 ```{r summary tree}
-summary(income_regression) # detailed summary of splits
+summary(income_regression) 
 ```
+
 ```{r plot tree 1}
 library(rpart.plot)
-rpart.plot(income_regression)
+rpart.plot(
+  income_regression,
+  type = 2,          
+  extra = 101,       
+  under = TRUE,      
+  faclen = 0,        
+  digits = -3,
+  tweak = 1.1        
+)
 ```
 # Reference
 
