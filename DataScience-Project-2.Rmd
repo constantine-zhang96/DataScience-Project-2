@@ -24,6 +24,7 @@ library(ggplot2)
 library(reshape2)
 library(lsr)
 library(rpart)
+library(interactions)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
@@ -293,9 +294,20 @@ This result imply that education level explains 14.1% of the variation in total 
 
 2. Run regression
 
+```{r change level to factor and reference level}
+df$education_level <- factor(df$educ_group)
+df$race <- factor(df$race)
+df$gender <- factor(df$gender)
+df$race <- relevel(df$race, ref = "White")
+df$gender <- relevel(df$gender, ref = "Male")
+df$educ_group <- relevel(df$educ_group, ref = "HS or Less")
+```
+
+
+
 ```{r linear regression without control}
-model1 <- lm( total_income ~ education_level, data = df)
-summary(model1)
+model.base <- lm( log(total_income) ~ educ_group, data = df)
+summary(model.base)
 ```
 Our regression estimation for simple linear regression is:
 
@@ -305,26 +317,116 @@ total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*G
 Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legaly full time. 
 
 ```{r linear regression with control for gender, age, and race}
-model2 <- lm( total_income ~ education_level + gender_code + race_code + age , data = df)
-summary(model2)
+model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
+summary(model.gender.race)
+```
+```{r vif check model.gender.race}
+car::vif(model.gender.race)
 ```
 
-```{r linear regression with control for gender, age, and race}
-model1 <- lm( total_income ~ education_level * age + education_level * gender_code + education_level * race_code + age + race_code, data = df)
-summary(model1)
+
+```{r linear regression with interaction terms for gender, age, and race}
+model.interaction <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age  , data = df)
+summary(model.interaction)
+car::vif(model.interaction)
+```
+```{r}
+df$educ_group <- factor(df$educ_group,
+                        levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"),
+                        ordered = TRUE)
+levels(df$educ_group)
 
 
 ```
+
+```{r interaction plot gender}
+newdata <- expand.grid(
+  educ_group = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"),
+  gender = unique(df$gender),
+  race = unique(df$race),
+  age = mean(df$age, na.rm = TRUE)  
+)
+
+
+newdata$educ_group <- factor(newdata$educ_group,levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"), ordered = TRUE)
+predictions <- predict(model.interaction, newdata, se.fit = TRUE, interval = "confidence")
+
+pred_df %>%
+  group_by(educ_group, gender) %>%
+  summarise(
+    log_income_pred = mean(log_income_pred),
+    ci_lower = mean(ci_lower),
+    ci_upper = mean(ci_upper)
+  ) -> pred_summary
+
+
+
+ggplot(pred_summary, aes(x = educ_group, y = log_income_pred, color = gender)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper),
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  scale_x_discrete(limits = c("HS or Less", "Some College", "Bachelor's", "Post-Grad")) +
+  labs(x = "Education Level",
+       y = "Predicted log(Income)",
+       color = "Gender",
+       title = "Predicted log(Income) by Education and Gender") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r interaction plot race }
+library(emmeans)
+race_emm <- emmeans(model.interaction, ~ race)  
+race_df <- as.data.frame(race_emm)
+colnames(race_df)
+ggplot(race_df, aes(x = race, y = emmean)) +
+  geom_point(size = 3, color = "darkgreen") +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, color = "darkgreen") +
+  labs(x = "Race",
+       y = "Predicted log(Income)",
+       title = "Predicted log(Income) by Race") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+```{r race and gender plot}
+race_gender_emm <- emmeans(model.interaction, ~ race * gender)
+race_gender_df <- as.data.frame(race_gender_emm)
+
+race_gender_df$race <- factor(race_gender_df$race, levels = levels(df$race))
+
+ggplot(race_gender_df, aes(x = race, y = emmean, color = gender)) +
+  geom_point(position = position_dodge(width = 0.5), size = 3) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  labs(x = "Race",
+       y = "Predicted log(Income)",
+       color = "Gender",
+       title = "Predicted log(Income) by Race and Gender") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+
 
 3. Test the fit of the regression
 
-- Confusion matrix
-
-- Mcfaddle
-
 - Anova Test between models (remove controlling variables)
 
-- ROC/AUC
+```{r test for base model and control variable model}
+anova(model.base, model.gender.race)
+```
+
+```{r test control model and interaction model}
+anova(model.gender.race, model.interaction)
+```
 
 # Tree-based model
 
