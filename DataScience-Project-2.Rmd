@@ -25,6 +25,7 @@ library(reshape2)
 library(lsr)
 library(rpart)
 library(interactions)
+library(patchwork)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
@@ -320,16 +321,20 @@ Based on the simple regression model, education have a higher and higher influen
 model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
 summary(model.gender.race)
 ```
+This specification with age, gender, and race as control has a higher R squared value. We also get significance from all the coefficient. However, this specification only allow change in intercept not slope between different race and gender. 
+
 ```{r vif check model.gender.race}
 car::vif(model.gender.race)
 ```
-
 
 ```{r linear regression with interaction terms for gender, age, and race}
 model.interaction <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age  , data = df)
 summary(model.interaction)
 car::vif(model.interaction)
 ```
+Our third regression model specification allow change of slope between race and gender. The R squared of this model is slightly higher, but we still get significance in some of the coefficients due to the substantially large number of observations we have in the data frame. 
+
+
 ```{r}
 df$educ_group <- factor(df$educ_group,
                         levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"),
@@ -338,6 +343,7 @@ levels(df$educ_group)
 
 
 ```
+To better understanding and interpreting the result coefficients, we employ interaction plots for the third specification. 
 
 ```{r interaction plot gender}
 newdata <- expand.grid(
@@ -375,6 +381,8 @@ ggplot(pred_summary, aes(x = educ_group, y = log_income_pred, color = gender)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+This interaction plot represent the predicted value of log (income) for male and female based on their education level include confidence interval of 95%. This graph shows expectd results: as education level increase, income increase. Moreoevr, male have higher income compared to female in all education levels.  
+
 ```{r interaction plot race }
 library(emmeans)
 race_emm <- emmeans(model.interaction, ~ race)  
@@ -391,6 +399,8 @@ ggplot(race_df, aes(x = race, y = emmean)) +
 
 
 ```
+
+This interaction plot demonstrate the predicted value for log(income) based on race, the reusult is also expected as white has the highest predicted income while native american and african american has the lowest predicted income.
 
 ```{r race and gender plot}
 race_gender_emm <- emmeans(model.interaction, ~ race * gender)
@@ -412,8 +422,34 @@ ggplot(race_gender_df, aes(x = race, y = emmean, color = gender)) +
 
 ```
 
+Next, we include graph for predicted log(income) based on both race and gender to see the gender wage gap between different races. Japanese has the largest gender income gap follow by white while black and Chinese has the smallest gender income gap. 
+
+```{r race, gender, and education level}
+pred_emm <- emmeans(model.interaction, ~ educ_group * gender * race)
+pred_df <- as.data.frame(pred_emm)
 
 
+pred_df$educ_group <- factor(pred_df$educ_group,
+                             levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"),
+                             ordered = TRUE)
+pred_df$race <- factor(pred_df$race, levels = levels(df$race))
+pred_df$gender <- factor(pred_df$gender, levels = levels(df$gender))
+
+ggplot(pred_df, aes(x = educ_group, y = emmean, color = gender)) +
+  geom_point(position = position_dodge(width = 0.5), size = 1.5) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,
+                position = position_dodge(width = 0.5)) +
+  facet_wrap(~ race) +
+  labs(x = "Education Level",
+       y = "Predicted log(Income)",
+       color = "Gender",
+       title = "Predicted log(Income) by Education, Gender, and Race") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+This interaction plot combines everything together plotting predicted log(income) based on gender, race, and education level. It is clear that log(income) and education have a positve correlation in every racial group and gender income gap also presist in every racial group. 
 
 
 3. Test the fit of the regression
@@ -423,10 +459,14 @@ ggplot(race_gender_df, aes(x = race, y = emmean, color = gender)) +
 ```{r test for base model and control variable model}
 anova(model.base, model.gender.race)
 ```
+ANOVA test between base model and model with control variables shows a p value close to 0 meaning control variables of age, gender, and race significantly improve the model.
+
 
 ```{r test control model and interaction model}
 anova(model.gender.race, model.interaction)
 ```
+ANOVA test between model with control variables and model inetraction terms shows a p value close to 0 meaning adding interaction terms and allowing the slope to changed between races and gender significantly improve the model.
+
 
 # Tree-based model
 
