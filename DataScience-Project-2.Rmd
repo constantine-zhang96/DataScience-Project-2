@@ -641,7 +641,7 @@ Especially for high education groups.
 
 3. State-level economics barely affect individual income.
 
-The tree almost never splits on log(state_real_gdp) or state_total_jobs.
+The tree almost never splits on log(state_real_gdp) or log(state_total_jobs).
 
 ## Prune the Tree
 
@@ -794,6 +794,62 @@ error_summary
 
 The summary table of average SSE across folds reinforces the cross-validation results: the full tree achieves a lower mean SSE compared to the pruned tree, indicating that the pruned model performs worse on average. This outcome aligns with the individual-fold results, where pruning consistently increased prediction error. Because the full tree in this dataset is already extremely small, further pruning-based on selecting the subtree with the smallest xstd-removes an informative split and forces the model into an overly simplified structure. As a result, the pruned tree systematically underfits and fails to explain as much variation in total income as the full tree. Overall, the mean SSE comparison confirms that pruning does not improve predictive accuracy in this case, and the full tree provides better out-of-sample performance.
 
+# Bagging
+
+```{r bagging}
+library(randomForest)
+
+set.seed(2)
+
+df$ln_state_real_gdp   <- log(df$state_real_gdp)
+df$ln_state_total_jobs <- log(df$state_total_jobs)
+
+
+p <- 9  
+
+K <- 5
+df$fold_3 <- sample(1:K, size = nrow(df), replace = TRUE)
+
+bagging_results <- data.frame(
+  fold        = 1:K,
+  bagging_SSE = NA_real_
+)
+
+for (k in 1:K) {
+  test.set.2  <- df[df$fold_3 == k, ]
+  train.set.2 <- df[df$fold_3 != k, ]
+  
+  bag_fit_k <- randomForest(
+    total_income ~ education_cat + num_children + gender + age +
+      marital_status + race + citizenship +
+      ln_state_real_gdp  + ln_state_total_jobs,
+    data  = train.set.2,
+    mtry  = p,         
+    ntree = 10        
+  )
+  
+  pred_bag <- predict(bag_fit_k, newdata = test.set.2)
+  
+  bagging_results$bagging_SSE[k] <- sum((pred_bag - test.set$total_income)^2)
+}
+
+bagging_results
+```
+
+
+2. Summarize average performance across folds
+
+```{r rf_bagging_summary}
+rf_error_summary <- data.frame(
+  model    = c("Pruned tree", "Bagging"),
+  mean_SSE = c(
+    mean(rf_results$tree_SSE),
+    mean(rf_results$bagging_SSE)
+  )
+)
+
+rf_error_summary
+```
 # Reference
 
 Autor, D. H. (2014). Skills, education, and the rise of earnings inequality among the other 99 percent. Science, 344(6186), 843–851. https://doi.org/10.1126/science.1251868
