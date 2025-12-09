@@ -311,18 +311,19 @@ df$educ_group <- relevel(df$educ_group, ref = "HS or Less")
 model.base <- lm( log(total_income) ~ educ_group, data = df)
 summary(model.base)
 ```
-Our regression estimation for simple linear regression is:
-
-total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*Grade10 + 1269*Grade11 + 12964*Grade12 + 20261*1 year College + 25400*2 year college + 57307*4 year college + 106864* 5 or more year college 
 
 
-Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legaly full time. 
 
 ```{r linear regression with control for gender, age, and race}
 model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
 summary(model.gender.race)
 ```
 This specification with age, gender, and race as control has a higher R squared value. We also get significance from all the coefficient. However, this specification only allow change in intercept not slope between different race and gender. 
+
+total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*Grade10 + 1269*Grade11 + 12964*Grade12 + 20261*1 year College + 25400*2 year college + 57307*4 year college + 106864* 5 or more year college 
+
+Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legally full time. 
+
 
 ```{r vif check model.gender.race}
 car::vif(model.gender.race)
@@ -334,6 +335,15 @@ summary(model.interaction)
 car::vif(model.interaction)
 ```
 Our third regression model specification allow change of slope between race and gender. The R squared of this model is slightly higher, but we still get significance in some of the coefficients due to the substantially large number of observations we have in the data frame. 
+```{r state level macro}
+model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) + log(state_real_gdp), data = df)
+summary(model.interaction.state)
+
+```
+```{r}
+
+
+```
 
 
 ```{r}
@@ -351,12 +361,15 @@ newdata <- expand.grid(
   educ_group = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"),
   gender = unique(df$gender),
   race = unique(df$race),
-  age = mean(df$age, na.rm = TRUE)  
+  age = mean(df$age, na.rm = TRUE),
+  state_total_jobs = mean(df$state_total_jobs, na.rm = TRUE),
+  state_pc_income = mean(df$state_pc_income, na.rm = TRUE),
+  state_real_gdp = mean(df$state_real_gdp, na.rm = TRUE)
 )
 
 
 newdata$educ_group <- factor(newdata$educ_group,levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"), ordered = TRUE)
-predictions <- predict(model.interaction, newdata, se.fit = TRUE, interval = "confidence")
+predictions <- predict(model.interaction.state, newdata, se.fit = TRUE, interval = "confidence")
 pred_df <- cbind(newdata, predictions)
 
 colnames(pred_df)
@@ -394,7 +407,7 @@ This interaction plot represent the predicted value of log (income) for male and
 
 ```{r interaction plot race }
 library(emmeans)
-race_emm <- emmeans(model.interaction, ~ race)  
+race_emm <- emmeans(model.interaction.state, ~ race)  
 race_df <- as.data.frame(race_emm)
 colnames(race_df)
 ggplot(race_df, aes(x = race, y = emmean)) +
@@ -412,7 +425,7 @@ ggplot(race_df, aes(x = race, y = emmean)) +
 This interaction plot demonstrate the predicted value for log(income) based on race, the reusult is also expected as white has the highest predicted income while native american and african american has the lowest predicted income.
 
 ```{r race and gender plot}
-race_gender_emm <- emmeans(model.interaction, ~ race * gender)
+race_gender_emm <- emmeans(model.interaction.state, ~ race * gender)
 race_gender_df <- as.data.frame(race_gender_emm)
 
 race_gender_df$race <- factor(race_gender_df$race, levels = levels(df$race))
@@ -434,7 +447,7 @@ ggplot(race_gender_df, aes(x = race, y = emmean, color = gender)) +
 Next, we include graph for predicted log(income) based on both race and gender to see the gender wage gap between different races. Japanese has the largest gender income gap follow by white while black and Chinese has the smallest gender income gap. 
 
 ```{r race, gender, and education level}
-pred_emm <- emmeans(model.interaction, ~ educ_group * gender * race)
+pred_emm <- emmeans(model.interaction.state, ~ educ_group * gender * race)
 pred_df <- as.data.frame(pred_emm)
 
 
@@ -476,6 +489,9 @@ anova(model.gender.race, model.interaction)
 ```
 ANOVA test between model with control variables and model inetraction terms shows a p value close to 0 meaning adding interaction terms and allowing the slope to changed between races and gender significantly improve the model.
 
+```{r test state control model and interaction model }
+anova(model.interaction, model.interaction.state)
+```
 
 # Tree-based model
 
