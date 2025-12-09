@@ -357,15 +357,23 @@ newdata <- expand.grid(
 
 newdata$educ_group <- factor(newdata$educ_group,levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"), ordered = TRUE)
 predictions <- predict(model.interaction, newdata, se.fit = TRUE, interval = "confidence")
+pred_df <- cbind(newdata, predictions)
 
-pred_df %>%
+colnames(pred_df)
+pred_df <- pred_df %>%
+  rename(
+    log_income_pred = fit.fit,
+    ci_lower = fit.lwr,
+    ci_upper = fit.upr
+  )
+pred_summary <- pred_df %>%
   group_by(educ_group, gender) %>%
   summarise(
     log_income_pred = mean(log_income_pred),
     ci_lower = mean(ci_lower),
-    ci_upper = mean(ci_upper)
-  ) -> pred_summary
-
+    ci_upper = mean(ci_upper),
+    .groups = "drop"
+  )
 
 
 ggplot(pred_summary, aes(x = educ_group, y = log_income_pred, color = gender)) +
