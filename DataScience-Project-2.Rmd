@@ -16,6 +16,7 @@ output:
     toc: true
     toc_depth: '3'
 ---
+
 ```{r library, include = FALSE}
 library(tidyverse)
 library(haven)
@@ -636,7 +637,15 @@ library(rattle)
 print(income_regression$cptable)
 plotcp(income_regression)
 income_prune<- prune(income_regression, cp = income_regression$cptable[3,"CP"])
-fancyRpartPlot(income_prune)
+rpart.plot(
+  income_prune,
+  type = 2,          
+  extra = 101,       
+  under = TRUE,      
+  faclen = 0,        
+  digits = -3,
+  tweak = 1.1        
+)
 ```
 The graph shows the result with different number of terminal/leaf nodes on the x (tree size), and the cross-validated prediction error value of the model on the y. 
 
@@ -648,7 +657,7 @@ Set 5 fold
 
 ```{r, results="markup"}
 set.seed(1)
-df$fold <- floor(runif(nrow(df), 1, 11))
+df$fold <- floor(runif(nrow(df), 1, 5))
 test.set <- df[df$fold == 1, ]
 train.set <- df[df$fold != 1, ]
 ```
@@ -660,7 +669,15 @@ treefit_fold <- rpart(total_income ~ education_cat + num_children + gender + age
                      data = train.set,
                      method = "anova",
                      control = list(maxdepth = 7))
-fancyRpartPlot(treefit_fold)
+rpart.plot(
+  treefit_fold,
+  type = 2,          
+  extra = 101,       
+  under = TRUE,      
+  faclen = 0,        
+  digits = -3,
+  tweak = 1.1        
+)
 ```
 
 ```{r predict}
@@ -681,6 +698,85 @@ treefit_fold_prune_error
 ```
 
 Prune model has more error, but this is just the first fold!.
+
+2. Testing all 5 CV
+
+we split the dataset into 5 random groups. Pick one group as test set in turns, and the remaining four as training data, we can build five different models and score the models using the test data five times. 
+
+```{r four fold cv}
+library(rpart.plot)
+
+set.seed(1)
+
+K <- 5
+df$fold_2 <- sample(1:K, size = nrow(df), replace = TRUE)
+
+cv_results <- data.frame(
+  fold         = 1:K,
+  full_error   = NA_real_,
+  pruned_error = NA_real_,
+  cp_row3      = NA_real_,
+  error_diff   = NA_real_,   
+  compare      = NA_character_   
+)
+
+for (k in 1:K) {
+  test.set  <- df[df$fold_2 == k, ]
+  train.set <- df[df$fold_2 != k, ]
+  
+  treefit_k <- rpart(
+    total_income ~ education_cat + num_children + gender + age +
+      marital_status + race + citizenship +
+      log(state_real_gdp) + log(state_total_jobs),
+    data   = train.set,
+    method = "anova",
+    control = rpart.control(maxdepth = 7)
+  )
+  
+  pred_full <- predict(treefit_k, newdata = test.set)
+  sse_full  <- sum((pred_full - test.set$total_income)^2)
+  cv_results$full_error[k] <- sse_full
+  
+  cp_row3 <- treefit_k$cptable[3,"CP"]
+  cv_results$cp_row3[k] <- cp_row3
+  
+  treefit_k_pruned <- prune(treefit_k, cp = cp_row3)
+  
+  pred_pruned <- predict(treefit_k_pruned, newdata = test.set)
+  sse_pruned  <- sum((pred_pruned - test.set$total_income)^2)
+  cv_results$pruned_error[k] <- sse_pruned
+
+  cv_results$error_diff[k] <- sse_pruned - sse_full
+  
+  if (sse_pruned < sse_full) {
+    cv_results$compare[k] <- "Pruned < Full"   
+  } else if (sse_pruned > sse_full) {
+    cv_results$compare[k] <- "Pruned > Full"   
+  } else {
+    cv_results$compare[k] <- "Pruned = Full"  
+  }
+}
+
+
+cv_results
+```
+Across all five folds of the cross-validation exercise, the pruned tree consistently produced a higher sum of squared errors than the full tree, indicating that pruning reduced predictive accuracy in this dataset. This outcome is expected because the fully grown tree is already extremely small, with only three splits.
+
+We selected the subtree associated with the smallest xstd in the complexity table, leading to choosing the third row. Although this row provides the most stable cross-validated error estimate, it also corresponds to a simpler tree that eliminates the final split present in the full model. By removing an informative split, the pruned tree loses explanatory power and underfits relative to the full model. As a result, the pruned trees capture less variation in total income, leading to systematically worse out-of-sample performance. In this setting, pruning does not improve generalization; the full tree provides the best balance of fit and complexity for predictive accuracy.
+
+Summary table across folds:
+
+```{r error_summary}
+error_summary <- data.frame(
+  model    = c("Full tree", "Pruned tree"),
+  mean_SSE = c(mean(cv_results$full_error),
+               mean(cv_results$pruned_error))
+)
+
+error_summary
+```
+
+The summary table of average SSE across folds reinforces the cross-validation results: the full tree achieves a lower mean SSE compared to the pruned tree, indicating that the pruned model performs worse on average. This outcome aligns with the individual-fold results, where pruning consistently increased prediction error. Because the full tree in this dataset is already extremely small, further pruning-based on selecting the subtree with the smallest xstd-removes an informative split and forces the model into an overly simplified structure. As a result, the pruned tree systematically underfits and fails to explain as much variation in total income as the full tree. Overall, the mean SSE comparison confirms that pruning does not improve predictive accuracy in this case, and the full tree provides better out-of-sample performance.
 
 # Reference
 
