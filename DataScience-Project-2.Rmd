@@ -325,26 +325,36 @@ total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*G
 Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legally full time. 
 
 
-```{r vif check model.gender.race}
-car::vif(model.gender.race)
-```
-
 ```{r linear regression with interaction terms for gender, age, and race}
-model.interaction <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age  , data = df)
+model.interaction <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race +  +age  , data = df)
 summary(model.interaction)
-car::vif(model.interaction)
 ```
 Our third regression model specification allow change of slope between race and gender. The R squared of this model is slightly higher, but we still get significance in some of the coefficients due to the substantially large number of observations we have in the data frame. 
 ```{r state level macro}
 model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) + log(state_real_gdp), data = df)
 summary(model.interaction.state)
-
-```
-```{r}
-
-
 ```
 
+
+```{r vif check model with control}
+car::vif(model.gender.race)
+```
+
+```{r vif check model with interactions}
+car::vif(model.interaction)
+```
+
+```{r vif check model with interactions and state control}
+car::vif(model.interaction.state)
+```
+From VIF check of the three models, we found that state level control variables total job number and real gpd have multicollinearity issue.We decide to keep the total job and get rid of the real gdp in our final specification.
+
+
+```{r final model}
+model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) , data = df)
+summary(model.interaction.state)
+```
+The final Model consist of interaction terms for education level, gender, and race. The purpose for these interation terms is to allow the regression model change slope thus change the fitted value based on different racial and gender group. The reason for this set up is to simulate the real life situation that return of education to income can vary dependent on racial group and gender. The control variable age rules control for fact that income usually are positve correlated to age. The state level macro economics control variables control for the difference in state economic activities. 
 
 ```{r}
 df$educ_group <- factor(df$educ_group,
@@ -493,6 +503,9 @@ ANOVA test between model with control variables and model inetraction terms show
 anova(model.interaction, model.interaction.state)
 ```
 
+
+```{r}
+```
 # Tree-based model
 
 ## Grow the tree by each level of education attain
@@ -794,62 +807,65 @@ error_summary
 
 The summary table of average SSE across folds reinforces the cross-validation results: the full tree achieves a lower mean SSE compared to the pruned tree, indicating that the pruned model performs worse on average. This outcome aligns with the individual-fold results, where pruning consistently increased prediction error. Because the full tree in this dataset is already extremely small, further pruning-based on selecting the subtree with the smallest xstd-removes an informative split and forces the model into an overly simplified structure. As a result, the pruned tree systematically underfits and fails to explain as much variation in total income as the full tree. Overall, the mean SSE comparison confirms that pruning does not improve predictive accuracy in this case, and the full tree provides better out-of-sample performance.
 
-# Bagging
-
-```{r bagging}
-library(randomForest)
-
-set.seed(2)
-
-df$ln_state_real_gdp   <- log(df$state_real_gdp)
-df$ln_state_total_jobs <- log(df$state_total_jobs)
+<!-- # Bagging -->
 
 
-p <- 9  
+<!-- ```{r bagging} -->
 
-K <- 5
-df$fold_3 <- sample(1:K, size = nrow(df), replace = TRUE)
+<!-- library(randomForest) -->
 
-bagging_results <- data.frame(
-  fold        = 1:K,
-  bagging_SSE = NA_real_
-)
+<!-- set.seed(2) -->
 
-for (k in 1:K) {
-  test.set.2  <- df[df$fold_3 == k, ]
-  train.set.2 <- df[df$fold_3 != k, ]
-  
-  bag_fit_k <- randomForest(
-    total_income ~ education_cat + num_children + gender + age +
-      marital_status + race + citizenship +
-      ln_state_real_gdp  + ln_state_total_jobs,
-    data  = train.set.2,
-    mtry  = p,         
-    ntree = 10        
-  )
-  
-  pred_bag <- predict(bag_fit_k, newdata = test.set.2)
-  
-  bagging_results$bagging_SSE[k] <- sum((pred_bag - test.set$total_income)^2)
-}
-
-bagging_results
-```
+<!-- df$ln_state_real_gdp   <- log(df$state_real_gdp) -->
+<!-- df$ln_state_total_jobs <- log(df$state_total_jobs) -->
 
 
-2. Summarize average performance across folds
+<!-- p <- 9   -->
 
-```{r rf_bagging_summary}
-rf_error_summary <- data.frame(
-  model    = c("Pruned tree", "Bagging"),
-  mean_SSE = c(
-    mean(rf_results$tree_SSE),
-    mean(rf_results$bagging_SSE)
-  )
-)
+<!-- K <- 5 -->
+<!-- df$fold_3 <- sample(1:K, size = nrow(df), replace = TRUE) -->
 
-rf_error_summary
-```
+<!-- bagging_results <- data.frame( -->
+<!--   fold        = 1:K, -->
+<!--   bagging_SSE = NA_real_ -->
+<!-- ) -->
+
+<!-- for (k in 1:K) { -->
+<!--   test.set.2  <- df[df$fold_3 == k, ] -->
+<!--   train.set.2 <- df[df$fold_3 != k, ] -->
+
+<!--   bag_fit_k <- randomForest( -->
+<!--     total_income ~ education_cat + num_children + gender + age + -->
+<!--       marital_status + race + citizenship + -->
+<!--       ln_state_real_gdp  + ln_state_total_jobs, -->
+<!--     data  = train.set.2, -->
+<!--     mtry  = p,          -->
+<!--     ntree = 10         -->
+<!--   ) -->
+
+<!--   pred_bag <- predict(bag_fit_k, newdata = test.set.2) -->
+
+<!--   bagging_results$bagging_SSE[k] <- sum((pred_bag - test.set$total_income)^2) -->
+<!-- } -->
+
+<!-- bagging_results -->
+<!-- ``` -->
+
+
+<!-- 2. Summarize average performance across folds -->
+
+<!-- ```{r rf_bagging_summary} -->
+<!-- rf_error_summary <- data.frame( -->
+<!--   model    = c("Pruned tree", "Bagging"), -->
+<!--   mean_SSE = c( -->
+<!--     mean(rf_results$tree_SSE), -->
+<!--     mean(rf_results$bagging_SSE) -->
+<!--   ) -->
+<!-- ) -->
+
+<!-- rf_error_summary -->
+<!-- ``` -->
+
 # Reference
 
 Autor, D. H. (2014). Skills, education, and the rise of earnings inequality among the other 99 percent. Science, 344(6186), 843–851. https://doi.org/10.1126/science.1251868
