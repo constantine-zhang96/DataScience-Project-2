@@ -1872,9 +1872,9 @@ almost no direct impact on an individual’s income in this dataset.</p>
 </div>
 <div id="regression" class="section level1" number="6">
 <h1><span class="header-section-number">6</span> Regression</h1>
-<ol style="list-style-type: decimal">
-<li>Plot of correlation</li>
-</ol>
+<div id="plot-of-correlation" class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Plot of
+correlation</h2>
 <p>To explore main explanatory variable education level against main
 dependent variable real per capital income, we fiest look at the
 correlation plot between these two variables.</p>
@@ -1895,9 +1895,9 @@ eta_value(df$education_level, df$total_income)</code></pre>
 variation in total income. This is on the threshold of large effect
 which means education level has a meaningful and strong association with
 persoanl total income.</p>
-<ol start="2" style="list-style-type: decimal">
-<li>Run regression</li>
-</ol>
+</div>
+<div id="run-regression" class="section level2" number="6.2">
+<h2><span class="header-section-number">6.2</span> Run regression</h2>
 <pre class="r"><code>df$education_level &lt;- factor(df$educ_group)
 df$race &lt;- factor(df$race)
 df$gender &lt;- factor(df$gender)
@@ -2158,6 +2158,8 @@ summary(model.interaction.state)</code></pre>
 ## Residual standard error: 1.18 on 229305 degrees of freedom
 ## Multiple R-squared:  0.188,  Adjusted R-squared:  0.187 
 ## F-statistic: 1.47e+03 on 36 and 229305 DF,  p-value: &lt;0.0000000000000002</code></pre>
+<div id="vif-selection" class="section level3" number="6.2.1">
+<h3><span class="header-section-number">6.2.1</span> VIF selection</h3>
 <pre class="r"><code>car::vif(model.gender.race)</code></pre>
 <pre><code>##            GVIF Df GVIF^(1/(2*Df))
 ## educ_group 1.06  3            1.01
@@ -2296,6 +2298,11 @@ difference in state economic activities.</p>
                         ordered = TRUE)
 levels(df$educ_group)</code></pre>
 <pre><code>## [1] &quot;HS or Less&quot;   &quot;Some College&quot; &quot;Bachelor&#39;s&quot;   &quot;Post-Grad&quot;</code></pre>
+</div>
+</div>
+<div id="interaction-plots" class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Interaction
+Plots</h2>
 <p>To better understanding and interpreting the result coefficients, we
 employ interaction plots for the third specification.</p>
 <pre class="r"><code>newdata &lt;- expand.grid(
@@ -2464,6 +2471,7 @@ improve the model.</p>
 ## 2 229306 320010  2       425 152 &lt;0.0000000000000002 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+</div>
 </div>
 <div id="tree-based-model" class="section level1" number="7">
 <h1><span class="header-section-number">7</span> Tree-based model</h1>
