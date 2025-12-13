@@ -27,6 +27,7 @@ library(lsr)
 library(rpart)
 library(interactions)
 library(patchwork)
+library(rpart.plot)
 ```
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(results="markup", warning = F, message = F,
@@ -158,7 +159,7 @@ Together, these questions aim to provide a understanding of educational returns 
 # EDA
 
 
-1. Statistics summary, plot 
+## Statistics summary, plot 
 
 ```{r }
 
@@ -246,13 +247,9 @@ barplot(race_counts,
 
 This chart shows the race of the people in the study. The vast majority of people are White or from the "Other Asian/Pacific" group. On the other hand, there are very few Native American or Japanese participants.
 
+## Hypothesis Testing
 
-2. Normal distribution test
-
-3. Hypothesis testing 
-
-
-# ANOVA (Analysis of Variance) - FOR EDUCATION LEVELS
+### ANOVA (Analysis of Variance) - FOR EDUCATION LEVELS
  
  Research Question: Does education level result in a statistically significant difference in income?
  
@@ -281,7 +278,7 @@ plot(tukey, las=1, col="red")
 
 The results show that every single pairwise comparison is statistically significant. This confirms a clear hierarchy in earnings: those with 'High School or Less' earn the lowest, followed by 'Some College' and 'Bachelor's', while the 'Post-Grad' group has the highest income. In short, each step up in education level results in a statistically significant increase in total income.
 
-# T-Test (Independent Samples) - FOR GENDER
+### T-Test (Independent Samples) - FOR GENDER
  
  Research Question: Is there a difference between the mean incomes of males and females?
  
@@ -299,7 +296,7 @@ print(t_test)
 A Welch Two Sample t-test was conducted to compare the average incomes of male and female groups. The results indicate a highly significant difference between the two genders ($t = 88, p < 0.001$). The analysis shows that the average log-income for males ($10.8$) is higher than the average log-income for females ($10.3$). Additionally, the 95% confidence interval is entirely positive ($0.46$ to $0.48$), which confirms that males consistently earn more than females in this dataset. Based on this, the null hypothesis is rejected.
 
 
-# Pearson Correlation Test - income vs state gdp
+### Pearson Correlation Test - income vs state gdp
 
 Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their state?
 
@@ -549,10 +546,6 @@ ANOVA test between model with control variables and model inetraction terms show
 anova(model.interaction, model.interaction.state)
 ```
 
-
-```{r}
-```
-
 # Tree-based model
 
 ## Regression tree (restricted version)
@@ -616,7 +609,6 @@ Dramatic dominance of education:
 - All other variables (age, race, state controls): 0% - did not contribute to any splits
 
 ```{r plot tree 1}
-library(rpart.plot)
 rpart.plot(
   income_restricted,
   type = 2,          
@@ -661,17 +653,11 @@ Among the highest educated individuals, a substantial gender pay gap exists (~$5
 
 **Overall Takeaway**
 
-1. Education is the overwhelmingly strongest predictor of income.
+1. Education is the overwhelmingly strongest predictor of income: It defines the first split and most of the structure.
 
-It defines the first split and most of the structure.
-
-2. Gender is the second-most important variable.
-
-Especially for high education groups.
+2. Gender is the second-most important variabl: Especially for high education groups.
 
 3. State-level economics barely affect individual income.
-
-The tree almost never splits on log(state_real_gdp) or log(state_total_jobs).
 
 ### Prune the Tree
 
@@ -711,7 +697,7 @@ The tree reveals a simple three-level income hierarchy based purely on education
 
 ### Train/Test Split with Tree Pruning Evaluation”
 
-Set 5 fold
+We split the dataset into 5 random groups. Pick one group as test set in turns, and the remaining four as training data, we can build five different models and score the models using the test data five times. 
 
 1. First fold Cross-Validation (1-fold CV) for Pruning
 
@@ -739,11 +725,12 @@ rpart.plot(
 )
 ```
 
+This train set regression tree predicts total income using demographic and economic variables from 171,868 training observations. The tree maintains identical structure: education splits first (categories 1-10), followed by gender within the highest education group. Predicted incomes remain nearly identical to the full tree.
+
 ```{r predict}
 pred <- predict(treefit_fold, test.set)
 plot(pred,test.set$total_income, main="Predicted vs. Observed Total Income - Test set", xlab="Tree Predicted Salary", ylab="Observed Salary")
 treefit_fold_error <- sum((pred - test.set$total_income)^2)
-treefit_fold_error
 ```
 
 ```{r prune the tree}
@@ -753,14 +740,11 @@ treefit_fold_prune <- prune(treefit_fold,
 pred2 <- predict(treefit_fold_prune, test.set)
 plot(pred2,test.set$total_income, main="Predicted vs. Observed Total Income - Test set - Pruned", xlab="Tree Predicted Salary", ylab="Observed Salary")
 treefit_fold_prune_error <- sum((pred2 - test.set$total_income)^2)
-treefit_fold_prune_error
 ```
 
-Prune model has more error, but this is just the first fold!.
+This scatter plot reveals the model's fundamental limitation at both tree. For the full tree (restricted version),  it creates four distinct income predictions, actual incomes within each group vary enormously. For the pruned tree,  it creates only 4 distinct income predictions. However, individuals assigned the same prediction earn anywhere from \$0 to \$500,000+. The extreme vertical dispersion demonstrates that education and gender alone cannot predict individual income with useful precision. 
 
-2. Testing all 5 CV
-
-we split the dataset into 5 random groups. Pick one group as test set in turns, and the remaining four as training data, we can build five different models and score the models using the test data five times. 
+2. Testing all 5 folds
 
 ```{r four fold cv}
 library(rpart.plot)
@@ -820,7 +804,9 @@ cv_results
 ```
 Across all five folds of the cross-validation exercise, the pruned tree consistently produced a higher sum of squared errors than the full tree, indicating that pruning reduced predictive accuracy in this dataset. This outcome is expected because the fully grown tree is already extremely small, with only three splits.
 
-We selected the subtree associated with the smallest xstd in the complexity table, leading to choosing the third row. Although this row provides the most stable cross-validated error estimate, it also corresponds to a simpler tree that eliminates the final split present in the full model. By removing an informative split, the pruned tree loses explanatory power and underfits relative to the full model. As a result, the pruned trees capture less variation in total income, leading to systematically worse out-of-sample performance. In this setting, pruning does not improve generalization; the full tree provides the best balance of fit and complexity for predictive accuracy.
+We selected the subtree associated with the smallest xstd in the complexity table, leading to choosing the third row. Although this row provides the most stable cross-validated error estimate, it also corresponds to a simpler tree that eliminates the final split present in the full model. 
+
+By removing an informative split, the pruned tree loses explanatory power and underfits relative to the full model. As a result, the pruned trees capture less variation in total income, leading to systematically worse out-of-sample performance. In this setting, pruning does not improve generalization; the full tree provides the better balance of fit and complexity for predictive accuracy.
 
 Summary table across folds:
 
@@ -834,13 +820,15 @@ error_summary <- data.frame(
 error_summary
 ```
 
-The summary table of average SSE across folds reinforces the cross-validation results: the full tree achieves a lower mean SSE compared to the pruned tree, indicating that the pruned model performs worse on average. This outcome aligns with the individual-fold results, where pruning consistently increased prediction error. Because the full tree in this dataset is already extremely small, further pruning-based on selecting the subtree with the smallest xstd-removes an informative split and forces the model into an overly simplified structure. As a result, the pruned tree systematically underfits and fails to explain as much variation in total income as the full tree. Overall, the mean SSE comparison confirms that pruning does not improve predictive accuracy in this case, and the full tree provides better out-of-sample performance.
+The summary table of average SSE across folds reinforces the cross-validation results: the full tree achieves a lower mean SSE compared to the pruned tree, indicating that the pruned model performs worse on average. This outcome aligns with the individual-fold results, where pruning consistently increased prediction error. 
+
+Because the full tree in this dataset is already extremely small, further pruning-based on selecting the subtree with the smallest xstd-removes an informative split and forces the model into an overly simplified structure. As a result, the pruned tree systematically underfits and fails to explain as much variation in total income as the full tree. Overall, the mean SSE comparison confirms that pruning does not improve predictive accuracy in this case, and the full tree provides better out-of-sample performance.
 
 ## Tree (unrestricted version)
 
 ### Grow the tree
 
-The last tree, we set cp to be 0.01, which is the default and restricted value. We now relaxed all the condition to expand the tree
+At the last tree, we set CP to be 0.01, which is the default and restricted value. We now relaxed all the condition to expand the tree
 
 ```{r less restricted tree}
 income_full <- rpart(
@@ -884,13 +872,13 @@ rpart.plot(
 )
 ```
 
-Takeaways from the unrestricted tree
+Takeaways from the unrestricted tree:
 
 - Education remains the strongest predictor (first split).
 
 - Now age, gender, and race show up repeatedly across branches.
 
-- State macro variables appear more often, especially among high-education/high-income groups.
+- State macro variables appear now, especially among high-education/high-income groups.
 
 - Final leaves show richer segmentation of the population.
 
@@ -945,7 +933,6 @@ plot(
 
 axis(1, at = unique(x_numeric), labels = levels(leaf_factor))
 sse_unr_test <- sum((pred_unr - test.set_unr$total_income)^2)
-sse_unr_test
 ```
 ```{r compute sse}
 
@@ -963,6 +950,21 @@ model_compare_full <- data.frame(
 
 model_compare_full
 ```
+
+The unrestricted tree demonstrates that adding complexity doesn't solve the prediction problem—it merely slices the unexplained variance into more granular buckets. The SSE improvement is achieved by creating 25 specific prediction values instead of 4, but individuals within each new prediction group still exhibit enormous income variation (showed in the scatter plot above). This proves the issue is missing variables (occupation, hours worked, employment status, experience), not insufficient model complexity.
+
+# Conclusion
+
+This analysis of 229,342 individuals from the 2023 American Community Survey demonstrates that education is the strongest predictor of income in the United States, with each successive educational level—from high school to some college, bachelor's degree, and post-graduate education—yielding statistically significant income gains confirmed across ANOVA, regression models, and regression tree analysis. 
+
+Three critical findings emerge:
+
+- First, large pay gaps remain: gender and race disparities persist at all education levels, with men earning significantly more than women, and a \$52,000 gender pay gap appearing among the most educated workers. 
+
+- Second, state economic conditions play almost no role: individual income shows only weak correlation with state GDP, employment, and other macroeconomic indicators, suggesting that granular county-level data capturing local labor markets, cost of living, and industry clusters may have stronger predictive power than broad state averages. 
+
+- Third, all models agree but explain limited variance: linear regression, ANOVA, and tree-based methods consistently highlight education first and gender/race second, yet achieve only 15-18% explanatory power ($R^2$). Comparison between simple (4 nodes) and complex (25+ nodes) tree models reveals this is a data limitation rather than a modeling problem: both show massive within-group variance where individuals assigned to the same predicted income group have actual earnings ranging from \$0 to \$500,000+, indicating that unmeasured factors such as occupation, hours worked, employment status, and experience may drive the majority of income variation
+
 
 # Reference
 
