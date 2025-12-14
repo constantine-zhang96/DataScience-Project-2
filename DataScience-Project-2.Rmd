@@ -277,11 +277,11 @@ The results show a statistically significant relationship ($t = 14, p < 0.001$).
 
 ##  Plot of correlation
 
-To explore main explanatory variable education level against main dependent variable real per capital income, we fiest look at the correlation plot between these two variables.  
+To explore the main explanatory variable, education level, against the main dependent variable, real per capita income, we first look at the correlation plot between these two variables.
 
-Because our main explanatory variable is categorical variable, we be using correlation matrix for this section. 
+Because our main explanatory variable is categorical, we do not use a standard correlation matrix for this section.
 
-For numerical variable and categorical, we need to use Eta method to determine the correlation.
+For a numerical variable and a categorical variable, we use the eta method to determine the correlation.
 
 ```{r}
 etaSquared(aov( total_income ~ education_level, data = df))
@@ -292,7 +292,7 @@ eta_value <- function(cat, num) {
 eta_value(df$education_level, df$total_income)
 ```
 
-This result imply that education level explains 14.1% of the variation in total income. This is on the threshold of large effect which means education level has a meaningful and strong association with persoanl total income. 
+This result implies that education level explains 14.1% of the variation in total income. This is on the threshold of a large effect, which means education level has a meaningful and strong association with personal total income.
 
 ##  Run regression
 
@@ -318,18 +318,19 @@ summary(model.base)
 model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
 summary(model.gender.race)
 ```
-This specification with age, gender, and race as control has a higher R squared value. We also get significance from all the coefficient. However, this specification only allow change in intercept not slope between different race and gender. 
+This specification, with age, gender, and race as controls, has a higher R-squared value. We also find that all coefficients are statistically significant. However, this specification only allows differences in intercepts, not slopes, across race and gender.
 
-total income 2023(personal level) = 26928 + 1584*Grade5-8 + 3312*Grade9 + 3276*Grade10 + 1269*Grade11 + 12964*Grade12 + 20261*1 year College + 25400*2 year college + 57307*4 year college + 106864* 5 or more year college 
-
-Based on the simple regression model, education have a higher and higher influence on personal level income after 12 grade and all of those coefficients are significant. This results correpsondes to the real world because law forbide child labor thus income would only be associate with education level at least after high school when a person could work legally full time. 
+Based on the simple regression model, education has an increasingly strong influence on personal income after 12th grade, and all of these coefficients are statistically significant. These results correspond to the real world because laws forbid child labor; thus, income is only associated with education level after high school, when a person can legally work full time.
 
 
 ```{r linear regression with interaction terms for gender, age, and race}
 model.interaction <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race +  +age  , data = df)
 summary(model.interaction)
 ```
-Our third regression model specification allow change of slope between race and gender. The R squared of this model is slightly higher, but we still get significance in some of the coefficients due to the substantially large number of observations we have in the data frame. 
+
+Our third regression model specification allows the slopes to vary across race and gender. The R-squared of this model is slightly higher, and we obtain statistical significance for some coefficients due to the substantially large number of observations in the data frame.
+
+
 ```{r state level macro}
 model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) + log(state_real_gdp), data = df)
 summary(model.interaction.state)
@@ -347,14 +348,16 @@ car::vif(model.interaction)
 ```{r vif check model with interactions and state control}
 car::vif(model.interaction.state)
 ```
-From VIF check of the three models, we found that state level control variables total job number and real gpd have multicollinearity issue.We decide to keep the total job and get rid of the real gdp in our final specification.
+From the VIF checks of the three models, we found that the state-level control variables—total number of jobs and real GDP—exhibit multicollinearity. We therefore decide to keep total jobs and remove real GDP from our final specification.
 
 
 ```{r final model}
 model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) , data = df)
 summary(model.interaction.state)
 ```
-The final Model consist of interaction terms for education level, gender, and race. The purpose for these interation terms is to allow the regression model change slope thus change the fitted value based on different racial and gender group. The reason for this set up is to simulate the real life situation that return of education to income can vary dependent on racial group and gender. The control variable age rules control for fact that income usually are positve correlated to age. The state level macro economics control variables control for the difference in state economic activities. 
+The final model consists of interaction terms for education level, gender, and race. The purpose of these interaction terms is to allow the regression model to have different slopes, thereby changing the fitted values across racial and gender groups. The reason for this setup is to reflect the real-life situation in which the returns to education on income can vary by race and gender.
+
+The control variable age is included to account for the fact that income is usually positively correlated with age. The state-level macroeconomic control variables account for differences in economic activity across states.
 
 ```{r}
 df$educ_group <- factor(df$educ_group,
@@ -415,7 +418,7 @@ ggplot(pred_summary, aes(x = educ_group, y = log_income_pred, color = gender)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-This interaction plot represent the predicted value of log (income) for male and female based on their education level include confidence interval of 95%. This graph shows expectd results: as education level increase, income increase. Moreoevr, male have higher income compared to female in all education levels.  
+This interaction plot represents the predicted values of log income for males and females based on their education levels and includes 95% confidence intervals. This graph shows the expected results: as education level increases, income increases. Moreover, males have higher income than females at all education levels.
 
 ```{r interaction plot race }
 library(emmeans)
@@ -434,7 +437,7 @@ ggplot(race_df, aes(x = race, y = emmean)) +
 
 ```
 
-This interaction plot demonstrate the predicted value for log(income) based on race, the reusult is also expected as white has the highest predicted income while native american and african american has the lowest predicted income.
+This interaction plot demonstrates the predicted values of log income by race. The results are also expected, as White individuals have the highest predicted income, while Native American and African American individuals have the lowest predicted income.
 
 ```{r race and gender plot}
 race_gender_emm <- emmeans(model.interaction.state, ~ race * gender)
@@ -456,7 +459,7 @@ ggplot(race_gender_df, aes(x = race, y = emmean, color = gender)) +
 
 ```
 
-Next, we include graph for predicted log(income) based on both race and gender to see the gender wage gap between different races. Japanese has the largest gender income gap follow by white while black and Chinese has the smallest gender income gap. 
+Next, we include a graph of predicted log income based on both race and gender to examine the gender wage gap across different races. Japanese individuals have the largest gender income gap, followed by White individuals, while Black and Chinese individuals have the smallest gender income gap.
 
 ```{r race, gender, and education level}
 pred_emm <- emmeans(model.interaction.state, ~ educ_group * gender * race)
@@ -483,7 +486,7 @@ ggplot(pred_df, aes(x = educ_group, y = emmean, color = gender)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-This interaction plot combines everything together plotting predicted log(income) based on gender, race, and education level. It is clear that log(income) and education have a positve correlation in every racial group and gender income gap also presist in every racial group. 
+This interaction plot combines all factors, showing predicted log income based on gender, race, and education level. It is clear that log income and education have a positive correlation within every racial group, and the gender income gap persists across all racial groups. 
 
 
 3. Test the fit of the regression
@@ -493,18 +496,17 @@ This interaction plot combines everything together plotting predicted log(income
 ```{r test for base model and control variable model}
 anova(model.base, model.gender.race)
 ```
-ANOVA test between base model and model with control variables shows a p value close to 0 meaning control variables of age, gender, and race significantly improve the model.
+An ANOVA test comparing the base model to the model with control variables shows a p-value close to 0, indicating that the control variables—age, gender, and race—significantly improve the model.
 
 
 ```{r test control model and interaction model}
 anova(model.gender.race, model.interaction)
 ```
-ANOVA test between model with control variables and model inetraction terms shows a p value close to 0 meaning adding interaction terms and allowing the slope to changed between races and gender significantly improve the model.
+An ANOVA test comparing the model with only control variables to the model with interaction terms shows a p-value close to 0, indicating that adding interaction terms and allowing slopes to vary across race and gender significantly improves the model.
 
 ```{r test state control model and interaction model }
 anova(model.interaction, model.interaction.state)
 ```
-
 
 ```{r}
 ```
