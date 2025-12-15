@@ -102,8 +102,6 @@ df$educ_group[df$education == 10] <- "Bachelor's"
 df$educ_group[df$education == 11] <- "Post-Grad"
 df$educ_group <- factor(df$educ_group, levels = c("HS or Less", "Some College", "Bachelor's", "Post-Grad"))
 
-print(names(df))
-
 #Removing NA/ 0 INCOME
 df <- na.omit(df)
 df <- df[df$total_income > 0, ]
@@ -127,9 +125,15 @@ These studies collectively motivate an investigation into how educational return
 
 The analysis combines two complementary data sources from 2023, yielding 229,342 observations after cleaning and merging:
 
-1. American Community Survey (ACS) from IPUMS provides individual-level microdata including education levels, demographic characteristics, labor force status, and total income. This nationally representative dataset enables estimation of returns to education and subgroup analysis across gender, race, age, and nativity.
+**1. American Community Survey (ACS)*** from IPUMS provides individual-level micro-data including education levels, demographic characteristics, labor force status, and total income. This nationally representative dataset enables estimation of returns to education and subgroup analysis across gender, race, age, and nativity.
 
-2. State Annual Summary Statistics from the U.S. Bureau of Economic Analysis (BEA) offers macroeconomic indicators including real GDP, GDP per capita, and total employment. These variables allow the research to control for state-level economic conditions that may influence educational returns.
+**2. State Annual Summary Statistics** from the U.S. Bureau of Economic Analysis (BEA) offers macroeconomic indicators including real GDP, GDP per capita, and total employment. These variables allow the research to control for state-level economic conditions that may influence educational returns.
+
+Total number of variables: `r ncol(df)`, details as below:
+
+```{r variables name}
+print(names(df))
+```
 
 ## Data Limitations
 
@@ -150,7 +154,7 @@ The state-level economic data uses broad state averages that may obscure local l
 
 The project explores two primary questions:
 
-1. ***What is the relationship between annual income and levels of education, after accounting for demographic and state-level economic covariates?*** This question seeks to quantify the income premium associated with different educational attainment levels while controlling for confounding factors.
+1. ***What is the relationship between annual income and levels of education, after accounting for demographic and state-level economic variables?*** This question seeks to quantify the income premium associated with different educational attainment levels while controlling for confounding factors.
 
 2. ***How does the return to education vary by demographic subgroups and across states with differing economic conditions?*** This question investigates heterogeneity in educational returns, examining whether the economic benefits of education differ systematically across gender, race, age groups, and geographic regions with varying economic characteristics.
 
@@ -158,8 +162,7 @@ Together, these questions aim to provide a understanding of educational returns 
 
 # EDA
 
-
-## Statistics summary, plot 
+## Statistics summary and plot 
 
 ```{r }
 
@@ -189,6 +192,8 @@ boxplot(total_income ~ educ_group, data = df,
         las = 1) 
 
 # Median Income
+
+cat("Median Income by Education Level Table")
 income_by_educ <- aggregate(total_income ~ educ_group, data = df, FUN = median)
 print(income_by_educ)
 ```
@@ -249,7 +254,7 @@ This chart shows the race of the people in the study. The vast majority of peopl
 
 ## Hypothesis Testing
 
-### ANOVA (Analysis of Variance) - FOR EDUCATION LEVELS
+### ANOVA (Analysis of Variance) for Educational Level
  
  Research Question: Does education level result in a statistically significant difference in income?
  
@@ -278,7 +283,7 @@ plot(tukey, las=1, col="red")
 
 The results show that every single pairwise comparison is statistically significant. This confirms a clear hierarchy in earnings: those with 'High School or Less' earn the lowest, followed by 'Some College' and 'Bachelor's', while the 'Post-Grad' group has the highest income. In short, each step up in education level results in a statistically significant increase in total income.
 
-### T-Test (Independent Samples) - FOR GENDER
+### T-Test (Independent Samples) for Genders
  
  Research Question: Is there a difference between the mean incomes of males and females?
  
@@ -296,7 +301,7 @@ print(t_test)
 A Welch Two Sample t-test was conducted to compare the average incomes of male and female groups. The results indicate a highly significant difference between the two genders ($t = 88, p < 0.001$). The analysis shows that the average log-income for males ($10.8$) is higher than the average log-income for females ($10.3$). Additionally, the 95% confidence interval is entirely positive ($0.46$ to $0.48$), which confirms that males consistently earn more than females in this dataset. Based on this, the null hypothesis is rejected.
 
 
-### Pearson Correlation Test - income vs state gdp
+### Pearson Correlation Test - Income vs State GDP
 
 Research Question: To what extent is an individual's total income associated with the economic prosperity (GDP) of their state?
 
@@ -540,7 +545,7 @@ ggplot(pred_df, aes(x = educ_group, y = emmean, color = gender)) +
 This interaction plot combines all factors, showing predicted log income based on gender, race, and education level. It is clear that log income and education have a positive correlation within every racial group, and the gender income gap persists across all racial groups. 
 
 
-3. Test the fit of the regression
+## Test the fit of the regression
 
 - Anova Test between models (remove controlling variables)
 
@@ -708,7 +713,7 @@ The tree reveals a simple three-level income hierarchy based purely on education
 
 - Highest tier (24.8%): ~$134K - Education levels 11
 
-### Train/Test Split with Tree Pruning Evaluation”
+### Train/Test Split with Tree Pruning Evaluation
 
 We split the dataset into 5 random groups. Pick one group as test set in turns, and the remaining four as training data, we can build five different models and score the models using the test data five times. 
 
