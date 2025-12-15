@@ -125,7 +125,7 @@ These studies collectively motivate an investigation into how educational return
 
 The analysis combines two complementary data sources from 2023, yielding 229,342 observations after cleaning and merging:
 
-**1. American Community Survey (ACS)*** from IPUMS provides individual-level micro-data including education levels, demographic characteristics, labor force status, and total income. This nationally representative dataset enables estimation of returns to education and subgroup analysis across gender, race, age, and nativity.
+**1. American Community Survey (ACS)** from IPUMS provides individual-level micro-data including education levels, demographic characteristics, labor force status, and total income. This nationally representative dataset enables estimation of returns to education and subgroup analysis across gender, race, age, and nativity.
 
 **2. State Annual Summary Statistics** from the U.S. Bureau of Economic Analysis (BEA) offers macroeconomic indicators including real GDP, GDP per capita, and total employment. These variables allow the research to control for state-level economic conditions that may influence educational returns.
 
@@ -351,14 +351,14 @@ df$gender <- relevel(df$gender, ref = "Male")
 df$educ_group <- relevel(df$educ_group, ref = "HS or Less")
 ```
 
-### linear regression without control
+### Linear regression without control
 
 ```{r linear regression without control}
 model.base <- lm( log(total_income) ~ educ_group, data = df)
 summary(model.base)
 ```
 
-### linear regression with control for gender, age, and race
+### Linear regression with control for gender, age, and race
 
 ```{r linear regression with control for gender, age, and race}
 model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
@@ -369,7 +369,7 @@ This specification, with age, gender, and race as controls, has a higher R-squar
 Based on the simple regression model, education has an increasingly strong influence on personal income with each additional level of education a person acquire, and all of these coefficients are statistically significant. 
 
 
-### linear regression with interaction terms for gender, age, and race
+### Linear regression with interaction terms for gender, age, and race
 
 
 ```{r linear regression with interaction terms for gender, age, and race}
@@ -379,7 +379,7 @@ summary(model.interaction)
 
 Our third regression model specification allows the slopes to vary across race and gender. The R-squared of this model is slightly higher, and we obtain statistical significance for some coefficients due to the substantially large number of observations in the data frame.
 
-### linear regression with interaction terms for gender, age, and race, and macro control
+### Linear regression with interaction terms for gender, age, and race, and macro control
 
 
 ```{r state level macro}
@@ -401,7 +401,7 @@ car::vif(model.interaction.state)
 ```
 From the VIF checks of the three models, we found that the state-level control variables—total number of jobs and real GDP—exhibit multicollinearity. We therefore decide to keep total jobs and remove real GDP from our final specification.
 
-## final model
+## Final model
 
 ```{r final model}
 model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) , data = df)
@@ -578,7 +578,7 @@ To investigate the relationship between educational attainment and income, we em
 
 - Predictors included:
 
-  - Demographics: educational level (categorical, as we want to examine each level of education attainment will impact the total income), gender, age, and race
+  - Demographics: educational attainment (categorical, to examine how each level of education affects total income), gender, age, and race
   
   - State-level macroeconomic controls: log-transformed real GDP, per capita income, and total employment to account for regional economic variations
 
@@ -612,8 +612,6 @@ Cross-validation results show strong performance:
 - Relative error decreased from 1.000 to 0.844, representing a 15.6% reduction in prediction error
 
 - Cross-validation error (xerror) closely tracks training error, indicating the model generalizes well without overfitting
-
-- Each successive split provides diminishing returns (10.8% → 3.0% → 1.7% → 1.0% reduction)
 
 The tree stopped at 3 splits because the 4th split barely met the 1% improvement threshold, and no subsequent splits would have provided sufficient error reduction to justify additional complexity.
 
@@ -655,7 +653,7 @@ There's a dramatic income divide (~$77,000 difference) between those with educat
 
   - Education levels 1-8, meaning $\leq$  2 years of college (48.9% of total sample): $41,809 average income
   
-  - Higher levels within this group (10 - 4 years of college) (26.4% of total sample): $84,235 average income
+  - Higher levels within this group (10, meaning 4 years of college) (26.4% of total sample): $84,235 average income
 
 This indicates meaningful income gradations even within the lower education categories.
 
@@ -717,7 +715,7 @@ The tree reveals a simple three-level income hierarchy based purely on education
 
 We split the dataset into 5 random groups. Pick one group as test set in turns, and the remaining four as training data, we can build five different models and score the models using the test data five times. 
 
-1. First fold Cross-Validation (1-fold CV) for Pruning
+***1. First fold Cross-Validation (1-fold CV) for Pruning***
 
 ```{r, results="markup"}
 set.seed(1)
@@ -762,7 +760,7 @@ treefit_fold_prune_error <- sum((pred2 - test.set$total_income)^2)
 
 This scatter plot reveals the model's fundamental limitation at both tree. For the full tree (restricted version),  it creates four distinct income predictions, actual incomes within each group vary enormously. For the pruned tree,  it creates only 4 distinct income predictions. However, individuals assigned the same prediction earn anywhere from \$0 to \$500,000+. The extreme vertical dispersion demonstrates that education and gender alone cannot predict individual income with useful precision. 
 
-2. Testing all 5 folds
+***2. Testing all 5 folds***
 
 ```{r four fold cv}
 library(rpart.plot)
