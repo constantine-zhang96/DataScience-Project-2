@@ -346,14 +346,14 @@ df$gender <- relevel(df$gender, ref = "Male")
 df$educ_group <- relevel(df$educ_group, ref = "HS or Less")
 ```
 
-
+### linear regression without control
 
 ```{r linear regression without control}
 model.base <- lm( log(total_income) ~ educ_group, data = df)
 summary(model.base)
 ```
 
-
+### linear regression with control for gender, age, and race
 
 ```{r linear regression with control for gender, age, and race}
 model.gender.race <- lm( log(total_income) ~ educ_group + gender + race + age , data = df)
@@ -361,7 +361,10 @@ summary(model.gender.race)
 ```
 This specification, with age, gender, and race as controls, has a higher R-squared value. We also find that all coefficients are statistically significant. However, this specification only allows differences in intercepts, not slopes, across race and gender.
 
-Based on the simple regression model, education has an increasingly strong influence on personal income after 12th grade, and all of these coefficients are statistically significant. These results correspond to the real world because laws forbid child labor; thus, income is only associated with education level after high school, when a person can legally work full time.
+Based on the simple regression model, education has an increasingly strong influence on personal income with each additional level of education a person acquire, and all of these coefficients are statistically significant. 
+
+
+### linear regression with interaction terms for gender, age, and race
 
 
 ```{r linear regression with interaction terms for gender, age, and race}
@@ -370,6 +373,8 @@ summary(model.interaction)
 ```
 
 Our third regression model specification allows the slopes to vary across race and gender. The R-squared of this model is slightly higher, and we obtain statistical significance for some coefficients due to the substantially large number of observations in the data frame.
+
+### linear regression with interaction terms for gender, age, and race, and macro control
 
 
 ```{r state level macro}
@@ -391,14 +396,19 @@ car::vif(model.interaction.state)
 ```
 From the VIF checks of the three models, we found that the state-level control variables—total number of jobs and real GDP—exhibit multicollinearity. We therefore decide to keep total jobs and remove real GDP from our final specification.
 
+## final model
 
 ```{r final model}
 model.interaction.state <- lm( log(total_income) ~  educ_group   * gender + educ_group* race + gender * race + age + log(state_total_jobs) + log(state_pc_income) , data = df)
 summary(model.interaction.state)
 ```
-The final model consists of interaction terms for education level, gender, and race. The purpose of these interaction terms is to allow the regression model to have different slopes, thereby changing the fitted values across racial and gender groups. The reason for this setup is to reflect the real-life situation in which the returns to education on income can vary by race and gender.
+Final model consists of interaction terms for education level, gender, and race. The purpose of these interaction terms is to allow the regression model to have different slopes, thereby changing the fitted values across racial and gender groups. 
 
-The control variable age is included to account for the fact that income is usually positively correlated with age. The state-level macroeconomic control variables account for differences in economic activity across states.
+Age is included to account for the fact that income is usually positively correlated with age. The state-level macroeconomic control variables account for differences in economic activity across states.
+
+The regression results show that education has a strong positive effect on income. Females earn less than males on average, although the gender gap varies across racial groups. Gaps are smaller for Black, Chinese, and Other Asian/Pacific individuals, but slightly larger for Japanese. Race also significantly affects income: predicted earnings are highest for White and Japanese individuals and lowest for Black and Native American individuals. Interactions between education and race indicate that returns to education are strongest for Chinese and Other Asian/Pacific groups, while slightly lower for Black and Native American groups. Age and state-level economic conditions, including total jobs and per capita income, are positively associated with income.
+
+Overall, income rises with education level, but returns of education are different among each racial group. For example: we estimate that a white male person who finish a bachelor's degree would see their income rise by 79%. However, for a black male person, we estimate only about 50.2% increase in their income. 
 
 ```{r}
 df$educ_group <- factor(df$educ_group,
@@ -428,7 +438,7 @@ newdata$educ_group <- factor(newdata$educ_group,levels = c("HS or Less", "Some C
 predictions <- predict(model.interaction.state, newdata, se.fit = TRUE, interval = "confidence")
 pred_df <- cbind(newdata, predictions)
 
-colnames(pred_df)
+#colnames(pred_df)
 pred_df <- pred_df %>%
   rename(
     log_income_pred = fit.fit,
@@ -465,7 +475,7 @@ This interaction plot represents the predicted values of log income for males an
 library(emmeans)
 race_emm <- emmeans(model.interaction.state, ~ race)  
 race_df <- as.data.frame(race_emm)
-colnames(race_df)
+#colnames(race_df)
 ggplot(race_df, aes(x = race, y = emmean)) +
   geom_point(size = 3, color = "darkgreen") +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, color = "darkgreen") +
